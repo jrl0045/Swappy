@@ -1,8 +1,12 @@
-import { Search, MessageCircle, Bell, Plus, Globe, UserRound, LogOut, X, Heart } from 'lucide-react';
+import { Search, MessageCircle, Bell, Plus, Globe, LogOut, X, Heart } from 'lucide-react';
 import { useLanguage } from '../LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useUnreadCounts } from '../hooks/useUnreadCounts';
 import logo from '../assets/logo.png';
+
+function getInitials(name: string): string {
+  return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+}
 
 function Badge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -93,11 +97,14 @@ export function Navbar({ setView, onListItem, onMessages, onNotifications, onLog
                   title={t('favorites') as string}>
                   <Heart size={22} />
                 </button>
-                <button className="w-9 h-9 rounded-full border border-gray-200 hover:border-accent transition-all overflow-hidden bg-gray-50 flex items-center justify-center p-0"
+                <button
+                  className={`w-9 h-9 rounded-full border hover:border-accent transition-all overflow-hidden flex items-center justify-center p-0 ${profile?.avatarUrl ? 'bg-gray-50 border-gray-200' : 'bg-accent border-accent'}`}
                   onClick={() => setView('profile')}>
                   {profile?.avatarUrl
                     ? <img src={profile.avatarUrl} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    : <UserRound size={18} className="text-gray-400" />}
+                    : <span className="text-[11px] font-bold text-white leading-none">
+                        {getInitials(profile?.name || user?.email || '?')}
+                      </span>}
                 </button>
                 <button onClick={async () => { await signOut(); setView('home'); }}
                   className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
