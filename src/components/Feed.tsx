@@ -321,20 +321,6 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
               <span className="text-teal-300">{t('heroTitle2')}</span>
             </h1>
             <p className="text-lg md:text-xl text-teal-100 mb-8 max-w-2xl mx-auto">{t('heroSubtitle')}</p>
-            <div className="relative max-w-xl mx-auto">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input type="text" value={searchQuery}
-                onChange={e => onSearchChange?.(e.target.value)}
-                className="block w-full pl-12 pr-10 py-4 bg-white text-gray-900 rounded-2xl text-base placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-teal-500/30 shadow-2xl"
-                placeholder={t('heroSearch') as string} />
-              {searchQuery && (
-                <button onClick={clearSearch} className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600">
-                  <X size={18} />
-                </button>
-              )}
-            </div>
           </motion.div>
         </div>
       </div>
