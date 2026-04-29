@@ -280,6 +280,12 @@ export function MessagesModal({ onClose, targetUserId }: { onClose: () => void, 
 
   const handleRentalAction = async (rentalId: string, newStatus: 'confirmed' | 'cancelled') => {
     if (!user || !activeConv) return;
+    // Guard: prevent action if already confirmed or cancelled
+    const alreadyActioned = activeConv.messages.some(m => {
+      const p = parseRentalRequest(m.content);
+      return p?.rentalId === rentalId && p.status !== 'pending';
+    });
+    if (alreadyActioned) return;
     setActionLoading(rentalId);
     try {
       // 1. Update rental status in DB
@@ -345,12 +351,21 @@ export function MessagesModal({ onClose, targetUserId }: { onClose: () => void, 
   // Most recent rental payload in the active conversation
   const activeRentalPayload = activeConv
     ? (() => {
-        // Find the LAST rental embed (most recent status)
         const rentalMsgs = activeConv.messages.filter(m => parseRentalRequest(m.content));
         if (!rentalMsgs.length) return null;
         return parseRentalRequest(rentalMsgs[rentalMsgs.length - 1].content);
       })()
     : null;
+
+  // Latest status per rentalId — used to override old 'pending' cards after confirmation/rejection
+  const latestRentalStatus: Record<string, 'pending' | 'confirmed' | 'cancelled'> = {};
+  if (activeConv) {
+    for (const m of activeConv.messages) {
+      const p = parseRentalRequest(m.content);
+      if (p) latestRentalStatus[p.rentalId] = p.status;
+    }
+  }
+  const convIsOwner = activeConv ? isOwnerInConv(activeConv) : false;
 
   return (
     <div className="fixed inset-0 z-[100] flex flex-col bg-white">
@@ -447,10 +462,9 @@ export function MessagesModal({ onClose, targetUserId }: { onClose: () => void, 
                   const isMe = msg.senderId === user?.id;
                   const rentalPayload = parseRentalRequest(msg.content);
                   const showDate = idx === 0 || new Date(msg.createdAt).toDateString() !== new Date(activeConv.messages[idx - 1].createdAt).toDateString();
-
-                  // Para embeds de alquiler: si es un mensaje de confirmación/rechazo enviado por el propietario,
-                  // el arrendatario debe verlo como "no es owner" y el propietario como "es owner"
-                  const isOwner = isOwnerInConv(activeConv);
+                  const effectivePayload = rentalPayload
+                    ? { ...rentalPayload, status: latestRentalStatus[rentalPayload.rentalId] ?? rentalPayload.status }
+                    : null;
 
                   return (
                     <div key={msg.id}>
@@ -464,20 +478,19 @@ export function MessagesModal({ onClose, targetUserId }: { onClose: () => void, 
                         </div>
                       )}
 
-                      {rentalPayload ? (
+                      {effectivePayload ? (
                         <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
                           <p className="text-[11px] text-gray-400 mb-1.5 px-1">
-                            {rentalPayload.status === 'pending'
+                            {effectivePayload.status === 'pending'
                               ? (isMe ? 'Solicitud enviada' : 'Nueva solicitud de alquiler')
-                              : (rentalPayload.status === 'confirmed'
-                                  ? (isMe ? '✅ Confirmaste el alquiler' : '✅ El propietario confirmó tu alquiler')
-                                  : (isMe ? '❌ Rechazaste la solicitud' : '❌ El propietario rechazó tu solicitud')
-                                )
+                              : effectivePayload.status === 'confirmed'
+                                ? (isMe ? '✅ Confirmaste el alquiler' : '✅ El propietario confirmó tu alquiler')
+                                : (isMe ? '❌ Rechazaste la solicitud' : '❌ El propietario rechazó tu solicitud')
                             }
                           </p>
                           <RentalRequestCard
-                            payload={rentalPayload}
-                            isOwner={isOwner}
+                            payload={effectivePayload}
+                            isOwner={convIsOwner}
                             onAction={handleRentalAction}
                             actionLoading={actionLoading}
                           />

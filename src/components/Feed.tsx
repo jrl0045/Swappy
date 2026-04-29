@@ -54,7 +54,27 @@ function formatDistance(km: number): string {
 function MapView({ items, onSelectItem }: { items: RentalItem[]; onSelectItem: (item: RentalItem) => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersRef = useRef<{ marker: any; item: RentalItem }[]>([]);
+  const [selectedItem, setSelectedItem] = useState<RentalItem | null>(null);
+
+  const highlightMarker = (itemId: string | null) => {
+    markersRef.current.forEach(({ marker }) => {
+      const el = marker.getElement();
+      if (!el) return;
+      const isSelected = itemId !== null && marker._itemId === itemId;
+      const pin = el.querySelector('.map-pin') as HTMLElement | null;
+      const caret = el.querySelectorAll('div')[2] as HTMLElement | null;
+      if (pin) {
+        pin.style.background = isSelected ? '#0f766e' : 'white';
+        pin.style.color = isSelected ? 'white' : '#0f766e';
+        pin.style.transform = isSelected ? 'scale(1.1)' : '';
+        pin.style.boxShadow = isSelected ? '0 4px 16px rgba(15,118,110,0.4)' : '0 2px 12px rgba(0,0,0,0.2)';
+      }
+      if (caret) {
+        caret.style.borderTopColor = isSelected ? '#0f766e' : '#0f766e';
+      }
+    });
+  };
 
   useEffect(() => {
     const loadMap = async () => {
@@ -80,32 +100,36 @@ function MapView({ items, onSelectItem }: { items: RentalItem[]; onSelectItem: (
           attribution: '© OpenStreetMap',
         }).addTo(leafletMap.current);
       }
-      markersRef.current.forEach(m => m.remove());
+      markersRef.current.forEach(({ marker }) => marker.remove());
       markersRef.current = [];
+      setSelectedItem(null);
       const withCoords = items.filter(i => i.lat && i.lng);
       if (withCoords.length > 0) {
         const bounds: [number, number][] = [];
         withCoords.forEach(item => {
+          const price = Number.isInteger(item.pricePerDay) ? item.pricePerDay : item.pricePerDay.toFixed(0);
           const icon = L.divIcon({
             className: '',
-            html: `<div style="background:white;border:2px solid #0f766e;border-radius:12px;padding:4px 8px;white-space:nowrap;font-size:12px;font-weight:600;color:#0f766e;box-shadow:0 2px 8px rgba(0,0,0,0.15);cursor:pointer">€${item.pricePerDay}/día</div>`,
+            // translate(-50%, -100%) anchors the tip of the caret to the coordinate
+            html: `<div style="transform:translate(-50%,-100%);display:inline-block;cursor:pointer">
+              <div class="map-pin" style="background:white;border:2px solid #0f766e;border-radius:20px;padding:4px 10px;white-space:nowrap;font-size:12px;font-weight:700;color:#0f766e;box-shadow:0 2px 12px rgba(0,0,0,0.2);transition:background 0.15s,color 0.15s,transform 0.15s">
+                €${price}/día
+              </div>
+              <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid #0f766e;margin:0 auto;margin-top:-1px"></div>
+            </div>`,
             iconAnchor: [0, 0],
           });
-          const m = L.marker([item.lat!, item.lng!], { icon })
+          const marker = L.marker([item.lat!, item.lng!], { icon })
             .addTo(leafletMap.current)
-            .on('click', () => onSelectItem(item));
-          m.bindPopup(`
-            <div style="min-width:160px;font-family:sans-serif">
-              ${item.images[0] ? `<img src="${item.images[0]}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-bottom:6px" onerror="this.style.display='none'">` : ''}
-              <div style="font-weight:600;font-size:13px;margin-bottom:2px">${item.title}</div>
-              <div style="color:#0f766e;font-weight:700;font-size:13px">€${item.pricePerDay}/día</div>
-              <div style="color:#888;font-size:11px;margin-top:2px">${item.location}</div>
-            </div>
-          `, { maxWidth: 200 });
-          markersRef.current.push(m);
+            .on('click', () => {
+              setSelectedItem(item);
+              highlightMarker(item.id);
+            });
+          marker._itemId = item.id;
+          markersRef.current.push({ marker, item });
           bounds.push([item.lat!, item.lng!]);
         });
-        if (bounds.length > 1) leafletMap.current.fitBounds(bounds, { padding: [40, 40] });
+        if (bounds.length > 1) leafletMap.current.fitBounds(bounds, { padding: [60, 60] });
         else if (bounds.length === 1) leafletMap.current.setView(bounds[0], 13);
       }
     };
@@ -127,7 +151,65 @@ function MapView({ items, onSelectItem }: { items: RentalItem[]; onSelectItem: (
           {items.length > 0 ? 'Estos objetos no tienen ubicación en mapa. Al publicar, selecciona una ubicación.' : 'No hay objetos con ubicación en el mapa.'}
         </div>
       )}
-      <div ref={mapRef} className="rounded-2xl overflow-hidden border border-gray-200" style={{ height: 500 }} />
+      <div className="relative">
+        {/* isolation:isolate confines Leaflet z-indexes so notifications/modals render above the map */}
+        <div ref={mapRef} className="rounded-2xl overflow-hidden border border-gray-200" style={{ height: 560, isolation: 'isolate' }} />
+
+        {/* Selected item preview card — sibling of the map div, stacks above it naturally */}
+        <AnimatePresence>
+          {selectedItem && (
+            <motion.div
+              key={selectedItem.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm pointer-events-auto"
+            >
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden flex gap-3 p-3 border border-gray-100">
+                {/* Thumbnail */}
+                <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                  {selectedItem.images[0]
+                    ? <img src={selectedItem.images[0]} alt={selectedItem.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    : <div className="w-full h-full flex items-center justify-center"><Package size={24} className="text-gray-300" /></div>
+                  }
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900 truncate">{selectedItem.title}</p>
+                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 truncate">
+                      <MapPin size={10} className="shrink-0 text-accent" />{selectedItem.location}
+                    </p>
+                    {selectedItem.rating > 0 && (
+                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                        <Star size={10} className="text-yellow-400 fill-yellow-400 shrink-0" />
+                        {selectedItem.rating}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-2">
+                    <span className="text-sm font-bold text-accent">€{selectedItem.pricePerDay}<span className="text-xs font-normal text-gray-400">/día</span></span>
+                    <button
+                      onClick={() => onSelectItem(selectedItem)}
+                      className="bg-accent text-white text-xs font-semibold px-3 py-1.5 rounded-xl hover:bg-teal-700 transition-colors shrink-0"
+                    >
+                      Ver detalle
+                    </button>
+                  </div>
+                </div>
+                {/* Close */}
+                <button
+                  onClick={() => { setSelectedItem(null); highlightMarker(null); }}
+                  className="absolute top-2 right-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  <X size={12} className="text-gray-500" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
