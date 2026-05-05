@@ -34,6 +34,8 @@ export function NotificationsModal({ onClose }: { onClose: () => void }) {
 
   const handleAction = async (rental: RentalWithDetails, status: 'confirmed' | 'cancelled') => {
     if (!user) return;
+    // Guard: only act on pending rentals
+    if (rental.status !== 'pending') return;
     setActionLoadingId(rental.id);
     try {
       // 1. Update rental status in DB

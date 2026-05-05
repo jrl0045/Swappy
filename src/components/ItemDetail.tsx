@@ -69,7 +69,7 @@ function PickupZoneMap({ lat, lng, location }: { lat: number; lng: number; locat
   }, [lat, lng]);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden" style={{ isolation: 'isolate' }}>
       <div className="p-4 pb-2">
         <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-1">
           <MapPin size={14} className="text-accent" />

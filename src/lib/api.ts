@@ -45,6 +45,7 @@ function dbItemToRentalItem(item: DbItem): RentalItem {
       reviews: 0, verified: false, memberSince: '', responseRate: 0,
     },
     features: item.features,
+    createdAt: item.created_at,
   };
 }
 

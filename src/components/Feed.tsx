@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MapPin, Search, Sparkles, Loader2, LayoutGrid, Map, X, Package, Navigation, ChevronUp, Heart } from 'lucide-react';
+import { MapPin, Search, Sparkles, Loader2, LayoutGrid, Map, X, Package, Navigation, ChevronUp, Heart, Star } from 'lucide-react';
 import { categories, RentalItem } from '../data';
 import { fetchItems, fetchUserLikedItemIds, likeItem, unlikeItem } from '../lib/api';
 import { useLanguage } from '../LanguageContext';
@@ -30,6 +30,53 @@ function ItemImage({ src, alt, className }: { src: string; alt: string; classNam
   );
 }
 
+// ─── Skeleton Loader ─────────────────────────────────────────────────────────
+
+function ProductSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col animate-pulse">
+      <div className="aspect-square bg-gray-200" />
+      <div className="p-4 flex flex-col gap-2">
+        <div className="h-4 bg-gray-200 rounded-full w-3/4" />
+        <div className="h-4 bg-gray-200 rounded-full w-1/2" />
+        <div className="h-3 bg-gray-100 rounded-full w-1/3 mt-2" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Badge "Nuevo" ────────────────────────────────────────────────────────────
+
+function NewBadge({ createdAt }: { createdAt?: string }) {
+  if (!createdAt) return null;
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  if (new Date(createdAt) < sevenDaysAgo) return null;
+  return (
+    <span className="bg-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+      Nuevo
+    </span>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+function EmptyState({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-28 h-28 mb-6">
+        <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+          <circle cx="40" cy="40" r="26" stroke="#E5E7EB" strokeWidth="3" />
+          <line x1="59" y1="59" x2="78" y2="78" stroke="#D1D5DB" strokeWidth="4" strokeLinecap="round" />
+          <path d="M32 32l16 16M48 32L32 48" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      </div>
+      <p className="text-gray-700 font-semibold text-lg mb-1">{title}</p>
+      <p className="text-gray-400 text-sm max-w-xs mx-auto">{subtitle}</p>
+    </div>
+  );
+}
+
 // ─── Distancia Haversine ──────────────────────────────────────────────────────
 
 function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -54,7 +101,27 @@ function formatDistance(km: number): string {
 function MapView({ items, onSelectItem }: { items: RentalItem[]; onSelectItem: (item: RentalItem) => void }) {
   const mapRef = useRef<HTMLDivElement>(null);
   const leafletMap = useRef<any>(null);
-  const markersRef = useRef<any[]>([]);
+  const markersRef = useRef<{ marker: any; item: RentalItem }[]>([]);
+  const [selectedItem, setSelectedItem] = useState<RentalItem | null>(null);
+
+  const highlightMarker = (itemId: string | null) => {
+    markersRef.current.forEach(({ marker }) => {
+      const el = marker.getElement();
+      if (!el) return;
+      const isSelected = itemId !== null && marker._itemId === itemId;
+      const pin = el.querySelector('.map-pin') as HTMLElement | null;
+      const caret = el.querySelectorAll('div')[2] as HTMLElement | null;
+      if (pin) {
+        pin.style.background = isSelected ? '#0f766e' : 'white';
+        pin.style.color = isSelected ? 'white' : '#0f766e';
+        pin.style.transform = isSelected ? 'scale(1.1)' : '';
+        pin.style.boxShadow = isSelected ? '0 4px 16px rgba(15,118,110,0.4)' : '0 2px 12px rgba(0,0,0,0.2)';
+      }
+      if (caret) {
+        caret.style.borderTopColor = isSelected ? '#0f766e' : '#0f766e';
+      }
+    });
+  };
 
   useEffect(() => {
     const loadMap = async () => {
@@ -80,32 +147,36 @@ function MapView({ items, onSelectItem }: { items: RentalItem[]; onSelectItem: (
           attribution: '© OpenStreetMap',
         }).addTo(leafletMap.current);
       }
-      markersRef.current.forEach(m => m.remove());
+      markersRef.current.forEach(({ marker }) => marker.remove());
       markersRef.current = [];
+      setSelectedItem(null);
       const withCoords = items.filter(i => i.lat && i.lng);
       if (withCoords.length > 0) {
         const bounds: [number, number][] = [];
         withCoords.forEach(item => {
+          const price = Number.isInteger(item.pricePerDay) ? item.pricePerDay : item.pricePerDay.toFixed(0);
           const icon = L.divIcon({
             className: '',
-            html: `<div style="background:white;border:2px solid #0f766e;border-radius:12px;padding:4px 8px;white-space:nowrap;font-size:12px;font-weight:600;color:#0f766e;box-shadow:0 2px 8px rgba(0,0,0,0.15);cursor:pointer">€${item.pricePerDay}/día</div>`,
+            // translate(-50%, -100%) anchors the tip of the caret to the coordinate
+            html: `<div style="transform:translate(-50%,-100%);display:inline-block;cursor:pointer">
+              <div class="map-pin" style="background:white;border:2px solid #0f766e;border-radius:20px;padding:4px 10px;white-space:nowrap;font-size:12px;font-weight:700;color:#0f766e;box-shadow:0 2px 12px rgba(0,0,0,0.2);transition:background 0.15s,color 0.15s,transform 0.15s">
+                €${price}/día
+              </div>
+              <div style="width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:7px solid #0f766e;margin:0 auto;margin-top:-1px"></div>
+            </div>`,
             iconAnchor: [0, 0],
           });
-          const m = L.marker([item.lat!, item.lng!], { icon })
+          const marker = L.marker([item.lat!, item.lng!], { icon })
             .addTo(leafletMap.current)
-            .on('click', () => onSelectItem(item));
-          m.bindPopup(`
-            <div style="min-width:160px;font-family:sans-serif">
-              ${item.images[0] ? `<img src="${item.images[0]}" style="width:100%;height:80px;object-fit:cover;border-radius:8px;margin-bottom:6px" onerror="this.style.display='none'">` : ''}
-              <div style="font-weight:600;font-size:13px;margin-bottom:2px">${item.title}</div>
-              <div style="color:#0f766e;font-weight:700;font-size:13px">€${item.pricePerDay}/día</div>
-              <div style="color:#888;font-size:11px;margin-top:2px">${item.location}</div>
-            </div>
-          `, { maxWidth: 200 });
-          markersRef.current.push(m);
+            .on('click', () => {
+              setSelectedItem(item);
+              highlightMarker(item.id);
+            });
+          marker._itemId = item.id;
+          markersRef.current.push({ marker, item });
           bounds.push([item.lat!, item.lng!]);
         });
-        if (bounds.length > 1) leafletMap.current.fitBounds(bounds, { padding: [40, 40] });
+        if (bounds.length > 1) leafletMap.current.fitBounds(bounds, { padding: [60, 60] });
         else if (bounds.length === 1) leafletMap.current.setView(bounds[0], 13);
       }
     };
@@ -127,7 +198,65 @@ function MapView({ items, onSelectItem }: { items: RentalItem[]; onSelectItem: (
           {items.length > 0 ? 'Estos objetos no tienen ubicación en mapa. Al publicar, selecciona una ubicación.' : 'No hay objetos con ubicación en el mapa.'}
         </div>
       )}
-      <div ref={mapRef} className="rounded-2xl overflow-hidden border border-gray-200" style={{ height: 'clamp(280px, 60vh, 500px)' }} />
+      <div className="relative">
+        {/* isolation:isolate confines Leaflet z-indexes so notifications/modals render above the map */}
+        <div ref={mapRef} className="rounded-2xl overflow-hidden border border-gray-200" style={{ height: 'clamp(280px, 60vh, 500px)', isolation: 'isolate' }} />
+
+        {/* Selected item preview card — sibling of the map div, stacks above it naturally */}
+        <AnimatePresence>
+          {selectedItem && (
+            <motion.div
+              key={selectedItem.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              transition={{ duration: 0.2 }}
+              className="absolute bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-sm pointer-events-auto"
+            >
+              <div className="bg-white rounded-2xl shadow-2xl overflow-hidden flex gap-3 p-3 border border-gray-100">
+                {/* Thumbnail */}
+                <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                  {selectedItem.images[0]
+                    ? <img src={selectedItem.images[0]} alt={selectedItem.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    : <div className="w-full h-full flex items-center justify-center"><Package size={24} className="text-gray-300" /></div>
+                  }
+                </div>
+                {/* Info */}
+                <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
+                  <div>
+                    <p className="font-semibold text-sm text-gray-900 truncate">{selectedItem.title}</p>
+                    <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 truncate">
+                      <MapPin size={10} className="shrink-0 text-accent" />{selectedItem.location}
+                    </p>
+                    {selectedItem.rating > 0 && (
+                      <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
+                        <Star size={10} className="text-yellow-400 fill-yellow-400 shrink-0" />
+                        {selectedItem.rating}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between gap-2 mt-2">
+                    <span className="text-sm font-bold text-accent">€{selectedItem.pricePerDay}<span className="text-xs font-normal text-gray-400">/día</span></span>
+                    <button
+                      onClick={() => onSelectItem(selectedItem)}
+                      className="bg-accent text-white text-xs font-semibold px-3 py-1.5 rounded-xl hover:bg-teal-700 transition-colors shrink-0"
+                    >
+                      Ver detalle
+                    </button>
+                  </div>
+                </div>
+                {/* Close */}
+                <button
+                  onClick={() => { setSelectedItem(null); highlightMarker(null); }}
+                  className="absolute top-2 right-2 p-1 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors"
+                >
+                  <X size={12} className="text-gray-500" />
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }
@@ -239,20 +368,6 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
               <span className="text-teal-300">{t('heroTitle2')}</span>
             </h1>
             <p className="text-lg md:text-xl text-teal-100 mb-8 max-w-2xl mx-auto">{t('heroSubtitle')}</p>
-            <div className="relative max-w-xl mx-auto">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <Search className="h-5 w-5 text-gray-400" />
-              </div>
-              <input type="text" value={searchQuery}
-                onChange={e => onSearchChange?.(e.target.value)}
-                className="block w-full pl-12 pr-10 py-4 bg-white text-gray-900 rounded-2xl text-base placeholder-gray-400 focus:outline-none focus:ring-4 focus:ring-teal-500/30 shadow-2xl"
-                placeholder={t('heroSearch') as string} />
-              {searchQuery && (
-                <button onClick={clearSearch} className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600">
-                  <X size={18} />
-                </button>
-              )}
-            </div>
           </motion.div>
         </div>
       </div>
@@ -317,9 +432,8 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
         </div>
 
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 size={32} className="text-accent animate-spin mb-4" />
-            <p className="text-gray-500 text-sm">{t('loadingItems') as string}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {Array.from({ length: 8 }).map((_, i) => <ProductSkeleton key={i} />)}
           </div>
         )}
 
@@ -337,13 +451,10 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
         {!loading && !error && viewMode === 'grid' && (
           <>
             {displayItems.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-                  <Search size={28} className="text-gray-300" />
-                </div>
-                <p className="text-gray-500 font-medium mb-1">Sin resultados</p>
-                <p className="text-gray-400 text-sm">Prueba con otro término o categoría</p>
-              </div>
+              <EmptyState
+                title="Sin resultados"
+                subtitle="Prueba con otro término o categoría"
+              />
             )}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {displayItems.map((item, index) => {
@@ -365,6 +476,65 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
 
+                      {/* Badge disponibilidad */}
+                      <div className={`absolute top-3 left-3 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm ${
+                        isOwn ? 'bg-accent/90 text-white'
+                        : item.available ? 'bg-emerald-50/90 text-emerald-700'
+                        : 'bg-gray-100/90 text-gray-500'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isOwn ? 'bg-white' : item.available ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                        <span>{isOwn ? 'Tu objeto' : item.available ? t('available') : t('rented')}</span>
+                      </div>
+
+                      {/* Rating + Heart + Badge Nuevo */}
+                      <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
+                        <NewBadge createdAt={item.createdAt} />
+                        <div className="flex items-center gap-1.5">
+                        {item.rating > 0 && (
+                          <div className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-sm">
+                            <Star size={10} className="text-yellow-400 fill-yellow-400" />
+                            <span>{item.rating}</span>
+                          </div>
+                        )}
+                        <motion.button
+                          whileTap={{ scale: 0.8 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!user) return;
+                            const isLiked = likedIds.has(item.id);
+                            // Optimistic update
+                            setLikedIds(prev => {
+                              const next = new Set(prev);
+                              isLiked ? next.delete(item.id) : next.add(item.id);
+                              return next;
+                            });
+                            
+                            if (!isLiked) showToast('Te gusta esta publicación', 'like');
+
+                            (isLiked ? unlikeItem(user.id, item.id) : likeItem(user.id, item.id))
+                              .catch(() => {
+                                // Revert on error
+                                setLikedIds(prev => {
+                                  const next = new Set(prev);
+                                  isLiked ? next.add(item.id) : next.delete(item.id);
+                                  return next;
+                                });
+                              });
+                          }}
+                          className="bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center gap-1 shadow-sm hover:scale-105 transition-transform z-10 px-2.5 py-1.5 min-w-[32px] min-h-[32px]">
+                          <Heart size={14} className={likedIds.has(item.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'} />
+                          {(() => {
+                            const initial = initialLikedIds.current.has(item.id);
+                            const current = likedIds.has(item.id);
+                            let c = item.likesCount || 0;
+                            if (initial && !current) c = Math.max(0, c - 1);
+                            if (!initial && current) c += 1;
+                            return c > 0 ? <span className="text-xs font-semibold text-gray-700">{c}</span> : null;
+                          })()}
+                        </motion.button>
+                        </div>
+                      </div>
+
                       {/* Hover CTA — solo si no es propio */}
                       {!isOwn && (
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-10">
@@ -373,40 +543,6 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
                           </button>
                         </div>
                       )}
-
-                      {/* Likes — abajo a la derecha de la foto */}
-                      <motion.button
-                        whileTap={{ scale: 0.8 }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (!user) return;
-                          const isLiked = likedIds.has(item.id);
-                          setLikedIds(prev => {
-                            const next = new Set(prev);
-                            isLiked ? next.delete(item.id) : next.add(item.id);
-                            return next;
-                          });
-                          if (!isLiked) showToast('Te gusta esta publicación', 'like');
-                          (isLiked ? unlikeItem(user.id, item.id) : likeItem(user.id, item.id))
-                            .catch(() => {
-                              setLikedIds(prev => {
-                                const next = new Set(prev);
-                                isLiked ? next.add(item.id) : next.delete(item.id);
-                                return next;
-                              });
-                            });
-                        }}
-                        className="absolute bottom-2.5 right-2.5 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center gap-1 shadow-sm hover:scale-105 transition-transform z-10 px-2.5 py-1.5">
-                        <Heart size={13} className={likedIds.has(item.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'} />
-                        {(() => {
-                          const initial = initialLikedIds.current.has(item.id);
-                          const current = likedIds.has(item.id);
-                          let c = item.likesCount || 0;
-                          if (initial && !current) c = Math.max(0, c - 1);
-                          if (!initial && current) c += 1;
-                          return c > 0 ? <span className="text-xs font-semibold text-gray-700">{c}</span> : null;
-                        })()}
-                      </motion.button>
                     </div>
 
                     <div className="p-4 flex flex-col flex-1">

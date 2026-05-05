@@ -36,4 +36,5 @@ export interface RentalItem {
   likesCount?: number;
   owner: Owner;
   features: string[];
+  createdAt?: string;
 }
