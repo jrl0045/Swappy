@@ -258,7 +258,7 @@ export function ItemDetail({ item, onBack, onRent, onContact, onViewProfile }: {
   return (
     <>
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
-        className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        className={`max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 sm:pb-8 ${isOwn ? 'pb-20' : 'pb-44'}`}>
 
       <div className="flex items-center justify-between mb-6">
         <button onClick={onBack} className="flex items-center gap-2 text-gray-500 hover:text-primary transition-colors">
@@ -488,6 +488,36 @@ export function ItemDetail({ item, onBack, onRent, onContact, onViewProfile }: {
         </div>
       </div>
     </motion.div>
+
+    {/* Barra de reserva fija en móvil (por debajo de lg, encima de la bottom nav) */}
+    {!isOwn && (
+      <div className="lg:hidden fixed bottom-16 sm:bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-100 shadow-xl px-4 py-3 flex items-center gap-3">
+        <div className="shrink-0">
+          <div className="text-xl font-bold text-gray-900">
+            €{item.pricePerDay}
+            <span className="text-sm font-normal text-gray-400">/día</span>
+          </div>
+          <div className="flex items-center gap-1 text-xs text-gray-500 mt-0.5">
+            <Star size={11} className="text-yellow-400 fill-yellow-400" />
+            <span className="font-medium text-gray-700">{item.rating}</span>
+            <span>·</span>
+            <span>{item.totalRentals} alquileres</span>
+          </div>
+        </div>
+        <button
+          onClick={() => onRent()}
+          disabled={!item.available}
+          className={`flex-1 py-3 rounded-2xl text-base font-semibold flex items-center justify-center gap-2 transition-all ${
+            item.available
+              ? 'bg-accent text-white hover:bg-accent-dark shadow-md shadow-accent/20'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          <Calendar size={18} />
+          {item.available ? t('rentThisItem') : t('notAvailable')}
+        </button>
+      </div>
+    )}
 
     <AnimatePresence>
       {isShareModalOpen && (

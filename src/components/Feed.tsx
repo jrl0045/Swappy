@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MapPin, Star, Search, Sparkles, Loader2, LayoutGrid, Map, X, Package, Navigation, ChevronUp, Heart } from 'lucide-react';
+import { MapPin, Search, Sparkles, Loader2, LayoutGrid, Map, X, Package, Navigation, ChevronUp, Heart } from 'lucide-react';
 import { categories, RentalItem } from '../data';
 import { fetchItems, fetchUserLikedItemIds, likeItem, unlikeItem } from '../lib/api';
 import { useLanguage } from '../LanguageContext';
@@ -127,7 +127,7 @@ function MapView({ items, onSelectItem }: { items: RentalItem[]; onSelectItem: (
           {items.length > 0 ? 'Estos objetos no tienen ubicación en mapa. Al publicar, selecciona una ubicación.' : 'No hay objetos con ubicación en el mapa.'}
         </div>
       )}
-      <div ref={mapRef} className="rounded-2xl overflow-hidden border border-gray-200" style={{ height: 500 }} />
+      <div ref={mapRef} className="rounded-2xl overflow-hidden border border-gray-200" style={{ height: 'clamp(280px, 60vh, 500px)' }} />
     </div>
   );
 }
@@ -227,7 +227,7 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
           <div className="absolute top-10 left-10 w-64 h-64 bg-white rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-20 w-48 h-48 bg-teal-300 rounded-full blur-3xl" />
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 relative z-10">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
             className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-6 border border-white/20">
@@ -365,70 +365,48 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
 
-                      {/* Badge disponibilidad */}
-                      <div className={`absolute top-3 left-3 backdrop-blur-sm px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 shadow-sm ${
-                        isOwn ? 'bg-accent/90 text-white'
-                        : item.available ? 'bg-emerald-50/90 text-emerald-700'
-                        : 'bg-gray-100/90 text-gray-500'
-                      }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${isOwn ? 'bg-white' : item.available ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                        <span>{isOwn ? 'Tu objeto' : item.available ? t('available') : t('rented')}</span>
-                      </div>
-
-                      {/* Rating + Heart */}
-                      <div className="absolute top-3 right-3 flex items-center gap-1.5">
-                        {item.rating > 0 && (
-                          <div className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-sm">
-                            <Star size={10} className="text-yellow-400 fill-yellow-400" />
-                            <span>{item.rating}</span>
-                          </div>
-                        )}
-                        <motion.button
-                          whileTap={{ scale: 0.8 }}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (!user) return;
-                            const isLiked = likedIds.has(item.id);
-                            // Optimistic update
-                            setLikedIds(prev => {
-                              const next = new Set(prev);
-                              isLiked ? next.delete(item.id) : next.add(item.id);
-                              return next;
-                            });
-                            
-                            if (!isLiked) showToast('Te gusta esta publicación', 'like');
-
-                            (isLiked ? unlikeItem(user.id, item.id) : likeItem(user.id, item.id))
-                              .catch(() => {
-                                // Revert on error
-                                setLikedIds(prev => {
-                                  const next = new Set(prev);
-                                  isLiked ? next.add(item.id) : next.delete(item.id);
-                                  return next;
-                                });
-                              });
-                          }}
-                          className="bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center gap-1 shadow-sm hover:scale-105 transition-transform z-10 px-2.5 py-1.5 min-w-[32px] min-h-[32px]">
-                          <Heart size={14} className={likedIds.has(item.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'} />
-                          {(() => {
-                            const initial = initialLikedIds.current.has(item.id);
-                            const current = likedIds.has(item.id);
-                            let c = item.likesCount || 0;
-                            if (initial && !current) c = Math.max(0, c - 1);
-                            if (!initial && current) c += 1;
-                            return c > 0 ? <span className="text-xs font-semibold text-gray-700">{c}</span> : null;
-                          })()}
-                        </motion.button>
-                      </div>
-
                       {/* Hover CTA — solo si no es propio */}
                       {!isOwn && (
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-10">
                           <button className="bg-accent text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
                             {t('rentNow')}
                           </button>
                         </div>
                       )}
+
+                      {/* Likes — abajo a la derecha de la foto */}
+                      <motion.button
+                        whileTap={{ scale: 0.8 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (!user) return;
+                          const isLiked = likedIds.has(item.id);
+                          setLikedIds(prev => {
+                            const next = new Set(prev);
+                            isLiked ? next.delete(item.id) : next.add(item.id);
+                            return next;
+                          });
+                          if (!isLiked) showToast('Te gusta esta publicación', 'like');
+                          (isLiked ? unlikeItem(user.id, item.id) : likeItem(user.id, item.id))
+                            .catch(() => {
+                              setLikedIds(prev => {
+                                const next = new Set(prev);
+                                isLiked ? next.add(item.id) : next.delete(item.id);
+                                return next;
+                              });
+                            });
+                        }}
+                        className="absolute bottom-2.5 right-2.5 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center gap-1 shadow-sm hover:scale-105 transition-transform z-10 px-2.5 py-1.5">
+                        <Heart size={13} className={likedIds.has(item.id) ? 'text-red-500 fill-red-500' : 'text-gray-400'} />
+                        {(() => {
+                          const initial = initialLikedIds.current.has(item.id);
+                          const current = likedIds.has(item.id);
+                          let c = item.likesCount || 0;
+                          if (initial && !current) c = Math.max(0, c - 1);
+                          if (!initial && current) c += 1;
+                          return c > 0 ? <span className="text-xs font-semibold text-gray-700">{c}</span> : null;
+                        })()}
+                      </motion.button>
                     </div>
 
                     <div className="p-4 flex flex-col flex-1">
@@ -460,7 +438,7 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
           <motion.button
             initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="fixed bottom-6 right-6 z-40 w-11 h-11 bg-accent text-white rounded-full shadow-lg shadow-accent/30 flex items-center justify-center hover:bg-accent-dark transition-colors"
+            className="fixed bottom-20 sm:bottom-6 right-6 z-40 w-11 h-11 bg-accent text-white rounded-full shadow-lg shadow-accent/30 flex items-center justify-center hover:bg-accent-dark transition-colors"
             title="Volver arriba">
             <ChevronUp size={20} />
           </motion.button>

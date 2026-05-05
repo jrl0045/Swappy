@@ -12,11 +12,13 @@ import { Profile } from './components/Profile';
 import { PublicProfile } from './components/PublicProfile';
 import { Favorites } from './components/Favorites';
 import { AuthModal } from './components/AuthModal';
+import { BottomNav } from './components/BottomNav';
 import { RentalItem } from './data';
 import { fetchItemById } from './lib/api';
 import { LanguageContext } from './LanguageContext';
+import { Lang, translations, TranslationKey } from './i18n';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { ToastProvider, useToast } from './context/ToastContext';
+import { ToastProvider } from './context/ToastContext';
 
 function AppContent() {
   const [view, setView] = useState('home');
@@ -87,9 +89,12 @@ function AppContent() {
   };
 
   const handleSetView = (v: string) => {
-    if (v === 'profile' || v === 'favorites') requireAuth(() => setView(v));
-    else setView(v);
-    if (v !== 'home') setSearchQuery('');
+    if (v === 'profile' || v === 'favorites') {
+      requireAuth(() => { setView(v); setSearchQuery(''); });
+    } else {
+      setView(v);
+      if (v !== 'home') setSearchQuery('');
+    }
   };
 
   const handleSearchChange = (q: string) => {
@@ -98,23 +103,31 @@ function AppContent() {
   };
 
   return (
-    <>
-      <div className="min-h-screen bg-[#F9FAFB] text-gray-900 font-sans flex flex-col">
+    <div className="min-h-screen bg-[#F9FAFB] text-gray-900 font-sans flex flex-col">
 
         {view !== 'messages' && (
-          <Navbar
-            setView={handleSetView}
-            onListItem={() => requireAuth(() => setIsListItemModalOpen(true))}
-            onMessages={() => requireAuth(() => openMessages())}
-            onNotifications={() => requireAuth(() => setIsNotificationsOpen(true))}
-            onLogin={() => { setAuthModalMode('login'); setIsAuthModalOpen(true); }}
-            onRegister={() => { setAuthModalMode('register'); setIsAuthModalOpen(true); }}
-            searchQuery={searchQuery}
-            onSearchChange={handleSearchChange}
-          />
+          <>
+            <Navbar
+              setView={handleSetView}
+              onListItem={() => requireAuth(() => setIsListItemModalOpen(true))}
+              onMessages={() => requireAuth(() => openMessages())}
+              onNotifications={() => requireAuth(() => setIsNotificationsOpen(true))}
+              onLogin={() => { setAuthModalMode('login'); setIsAuthModalOpen(true); }}
+              onRegister={() => { setAuthModalMode('register'); setIsAuthModalOpen(true); }}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+            />
+            <BottomNav
+              view={view}
+              setView={handleSetView}
+              onListItem={() => requireAuth(() => setIsListItemModalOpen(true))}
+              onMessages={() => requireAuth(() => openMessages())}
+              onLogin={() => { setAuthModalMode('login'); setIsAuthModalOpen(true); }}
+            />
+          </>
         )}
 
-        <main className="flex-1 pb-20">
+        <main className={`flex-1 ${view !== 'messages' ? 'pb-20' : ''}`}>
           <AnimatePresence mode="wait">
             {view === 'home' && (
               <motion.div key="feed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -168,23 +181,27 @@ function AppContent() {
           {isRentalModalOpen && selectedItem && (
             <RentalModal item={selectedItem} initialDate={rentalStartDate}
               onClose={() => { setIsRentalModalOpen(false); setRentalStartDate(null); }}
-              onOpenMessages={() => requireAuth(() => openMessages({userId: selectedItem.owner?.id, itemId: selectedItem.id}))} />
+              onOpenMessages={() => { if (selectedItem.owner?.id) requireAuth(() => openMessages({userId: selectedItem.owner.id, itemId: selectedItem.id})); }} />
           )}
           {isContactModalOpen && selectedItem && <ContactModal item={selectedItem} onClose={() => setIsContactModalOpen(false)} />}
           {isListItemModalOpen && <ListItemModal onClose={() => setIsListItemModalOpen(false)} />}
           {isNotificationsOpen && <NotificationsModal onClose={() => setIsNotificationsOpen(false)} />}
         </AnimatePresence>
       </div>
-    </>
   );
 }
 
 export default function App() {
+  const [lang, setLang] = useState<Lang>('es');
+  const t = (key: TranslationKey) => translations[lang as Lang][key];
+
   return (
-    <AuthProvider>
-      <ToastProvider>
-        <AppContent />
-      </ToastProvider>
-    </AuthProvider>
+    <LanguageContext.Provider value={{ lang, setLang, t }}>
+      <AuthProvider>
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
+      </AuthProvider>
+    </LanguageContext.Provider>
   );
 }
