@@ -22,7 +22,7 @@ export function BottomNav({ view, setView, onListItem, onMessages, onLogin }: {
   const { unreadMessages } = useUnreadCounts();
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-stretch h-16">
+    <nav className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-gray-100 flex items-stretch h-16 pb-[env(safe-area-inset-bottom)] box-content">
       {/* Inicio */}
       <button
         onClick={() => setView('home')}

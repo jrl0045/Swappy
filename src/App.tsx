@@ -127,7 +127,7 @@ function AppContent() {
           </>
         )}
 
-        <main className={`flex-1 ${view !== 'messages' ? 'pb-20' : ''}`}>
+        <main className={`flex-1 ${view !== 'messages' ? 'pb-[calc(5rem+env(safe-area-inset-bottom))]' : ''}`}>
           <AnimatePresence mode="wait">
             {view === 'home' && (
               <motion.div key="feed" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
