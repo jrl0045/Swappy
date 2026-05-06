@@ -22,6 +22,8 @@ function dbProfileToOwner(profile: DbProfile): Owner {
     verified: profile.verified,
     memberSince: profile.member_since || formatMemberSince(profile.created_at),
     responseRate: profile.response_rate,
+    isBanned: profile.is_banned,
+    isAdmin: profile.is_admin,
   };
 }
 
@@ -46,6 +48,7 @@ function dbItemToRentalItem(item: DbItem): RentalItem {
     },
     features: item.features,
     createdAt: item.created_at,
+    isActive: item.is_active !== false, // Default true if undefined
   };
 }
 
@@ -357,6 +360,7 @@ export async function fetchUserReviewsReceived(userId: string): Promise<UserRevi
 export interface ProfileData {
   id: string; name: string; avatarUrl: string; rating: number; reviewsCount: number;
   verified: boolean; memberSince: string; responseRate: number; location: string; bio: string;
+  isBanned?: boolean; isAdmin?: boolean;
 }
 
 export async function fetchProfile(profileId: string): Promise<ProfileData | null> {
@@ -369,6 +373,7 @@ export async function fetchProfile(profileId: string): Promise<ProfileData | nul
     // Si member_since está vacío, calcularlo del created_at
     memberSince: p.member_since || formatMemberSince(p.created_at),
     responseRate: p.response_rate, location: p.location || '', bio: p.bio || '',
+    isBanned: p.is_banned, isAdmin: p.is_admin,
   };
 }
 
@@ -570,5 +575,48 @@ export async function fetchNotifications(userId: string): Promise<NotificationDa
 
 export async function markNotificationsAsRead(userId: string): Promise<void> {
   const { error } = await supabase.from('notifications').update({ read: true }).eq('user_id', userId).eq('read', false);
-  if (error) console.error('Error marking notifications as read:', error);
+}
+
+// ─── Admin API ────────────────────────────────────────────────────────────────
+
+export async function fetchAllProfiles(): Promise<ProfileData[]> {
+  const { data, error } = await supabase.from('profiles').select('*').order('created_at', { ascending: false });
+  if (error) { console.error('Error fetching all profiles:', error); return []; }
+  return (data || []).map((p: any) => ({
+    id: p.id, name: p.name, avatarUrl: p.avatar_url, rating: p.rating,
+    reviewsCount: p.reviews_count, verified: p.verified,
+    memberSince: p.member_since || formatMemberSince(p.created_at),
+    responseRate: p.response_rate, location: p.location || '', bio: p.bio || '',
+    isBanned: p.is_banned, isAdmin: p.is_admin,
+  }));
+}
+
+export async function updateUserBanStatus(userId: string, isBanned: boolean): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ is_banned: isBanned }).eq('id', userId);
+  if (error) { console.error('Error updating user ban status:', error); throw error; }
+}
+
+export async function updateItemActiveStatus(itemId: string, isActive: boolean): Promise<void> {
+  const { error } = await supabase.from('items').update({ is_active: isActive }).eq('id', itemId);
+  if (error) { console.error('Error updating item active status:', error); throw error; }
+}
+
+export async function fetchCategories(): Promise<{ id: string; name: string; icon: string; isActive: boolean }[]> {
+  const { data, error } = await supabase.from('categories').select('*').order('name', { ascending: true });
+  if (error) { console.error('Error fetching categories:', error); return []; }
+  return (data || []).map((c: any) => ({ id: c.id, name: c.name, icon: c.icon || '', isActive: c.is_active !== false }));
+}
+
+export async function createCategory(name: string, icon: string): Promise<void> {
+  const { error } = await supabase.from('categories').insert({ name, icon, is_active: true });
+  if (error) { console.error('Error creating category:', error); throw error; }
+}
+
+export async function updateCategory(id: string, updates: { name?: string; icon?: string; isActive?: boolean }): Promise<void> {
+  const dbUpdates: any = {};
+  if (updates.name !== undefined) dbUpdates.name = updates.name;
+  if (updates.icon !== undefined) dbUpdates.icon = updates.icon;
+  if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+  const { error } = await supabase.from('categories').update(dbUpdates).eq('id', id);
+  if (error) { console.error('Error updating category:', error); throw error; }
 }

@@ -14,6 +14,8 @@ export interface DbProfile {
   created_at: string;
   followers_count?: number;
   following_count?: number;
+  is_admin?: boolean;
+  is_banned?: boolean;
 }
 
 export interface DbItem {
@@ -35,6 +37,7 @@ export interface DbItem {
   // Joined field
   owner?: DbProfile;
   likes_count?: number;
+  is_active?: boolean;
 }
 
 export interface DbRental {

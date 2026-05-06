@@ -12,6 +12,7 @@ import { Profile } from './components/Profile';
 import { PublicProfile } from './components/PublicProfile';
 import { Favorites } from './components/Favorites';
 import { AuthModal } from './components/AuthModal';
+import { AdminPanel } from './components/AdminPanel';
 import { BottomNav } from './components/BottomNav';
 import { RentalItem } from './data';
 import { fetchItemById } from './lib/api';
@@ -89,7 +90,7 @@ function AppContent() {
   };
 
   const handleSetView = (v: string) => {
-    if (v === 'profile' || v === 'favorites') {
+    if (v === 'profile' || v === 'favorites' || v === 'admin') {
       requireAuth(() => { setView(v); setSearchQuery(''); });
     } else {
       setView(v);
@@ -166,6 +167,11 @@ function AppContent() {
             {view === 'favorites' && user && (
               <motion.div key="favorites" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                 <Favorites onSelectItem={handleSelectItem} onBack={handleBack} />
+              </motion.div>
+            )}
+            {view === 'admin' && user && (
+              <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                <AdminPanel />
               </motion.div>
             )}
             {view === 'messages' && user && (

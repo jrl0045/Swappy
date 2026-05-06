@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MapPin, Search, Sparkles, Loader2, LayoutGrid, Map, X, Package, Navigation, ChevronUp, Heart, Star } from 'lucide-react';
-import { categories, RentalItem } from '../data';
-import { fetchItems, fetchUserLikedItemIds, likeItem, unlikeItem } from '../lib/api';
+import { MapPin, Search, Sparkles, Loader2, LayoutGrid, Map, X, Package, Navigation, ChevronUp, Heart, Star, Ban } from 'lucide-react';
+import { categories as defaultCategories, RentalItem, Category } from '../data';
+import { fetchItems, fetchUserLikedItemIds, likeItem, unlikeItem, fetchCategories } from '../lib/api';
 import { useLanguage } from '../LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -272,6 +272,7 @@ interface FeedProps {
 export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedProps) {
   const { user } = useAuth();
   const [activeCategory, setActiveCategory] = useState('All');
+  const [dbCategories, setDbCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<RentalItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -316,6 +317,12 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
       initialLikedIds.current = new Set();
     }
   }, [user]);
+
+  useEffect(() => {
+    fetchCategories().then(cats => {
+      if (cats.length > 0) setDbCategories(cats);
+    }).catch(console.error);
+  }, []);
 
   useEffect(() => {
     if (searchQuery === prevSearch.current) return;
@@ -376,7 +383,7 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
         {/* Categories + controles */}
         <div className="flex items-center gap-3 mb-8">
           <div className="flex overflow-x-auto hide-scrollbar gap-3 flex-1 pb-1">
-            {categories.map(cat => (
+            {(dbCategories.length > 0 ? [{name: 'All', icon: '🏠', isActive: true}, ...dbCategories] : defaultCategories).map(cat => cat.isActive !== false && (
               <button key={cat.name} onClick={() => setActiveCategory(cat.name)}
                 className={`whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
                   activeCategory === cat.name
@@ -486,8 +493,15 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
                         <span>{isOwn ? 'Tu objeto' : item.available ? t('available') : t('rented')}</span>
                       </div>
 
+                      {/* Icono de Bloqueado */}
+                      {(item.isActive === false || item.owner.isBanned) && (
+                        <div className="absolute top-3 right-3 bg-red-100 text-red-600 p-1.5 rounded-full z-20 shadow-sm" title="Publicación o usuario bloqueado">
+                          <Ban size={18} />
+                        </div>
+                      )}
+
                       {/* Rating + Heart + Badge Nuevo */}
-                      <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
+                      <div className={`absolute top-3 ${item.isActive === false || item.owner.isBanned ? 'right-12' : 'right-3'} flex flex-col items-end gap-1.5`}>
                         <NewBadge createdAt={item.createdAt} />
                         <div className="flex items-center gap-1.5">
                         {item.rating > 0 && (

@@ -1,4 +1,4 @@
-import { Search, MessageCircle, Bell, Plus, Globe, LogOut, X, Heart } from 'lucide-react';
+import { Search, MessageCircle, Bell, Plus, Globe, LogOut, X, Heart, ShieldAlert } from 'lucide-react';
 import { useLanguage } from '../LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useUnreadCounts } from '../hooks/useUnreadCounts';
@@ -97,6 +97,11 @@ export function Navbar({ setView, onListItem, onMessages, onNotifications, onLog
                   title={t('favorites') as string}>
                   <Heart size={22} />
                 </button>
+                {profile?.isAdmin && (
+                  <button onClick={() => setView('admin')} className="p-2 text-gray-500 hover:text-indigo-500 hover:bg-indigo-50 rounded-full transition-colors hidden sm:block" title="Administración">
+                    <ShieldAlert size={22} />
+                  </button>
+                )}
                 <button
                   className={`hidden sm:flex w-9 h-9 rounded-full border hover:border-accent transition-all overflow-hidden items-center justify-center p-0 ${profile?.avatarUrl ? 'bg-gray-50 border-gray-200' : 'bg-accent border-accent'}`}
                   onClick={() => setView('profile')}>

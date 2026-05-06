@@ -18,6 +18,15 @@ export interface Owner {
   verified: boolean;
   memberSince: string;
   responseRate: number;
+  isBanned?: boolean;
+  isAdmin?: boolean;
+}
+
+export interface Category {
+  id?: string;
+  name: string;
+  icon?: string;
+  isActive?: boolean;
 }
 
 export interface RentalItem {
@@ -37,4 +46,5 @@ export interface RentalItem {
   owner: Owner;
   features: string[];
   createdAt?: string;
+  isActive?: boolean;
 }

@@ -1,4 +1,4 @@
-import { Home, Heart, Plus, MessageCircle, UserRound } from 'lucide-react';
+import { Home, Heart, Plus, MessageCircle, UserRound, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useUnreadCounts } from '../hooks/useUnreadCounts';
 
@@ -73,6 +73,17 @@ export function BottomNav({ view, setView, onListItem, onMessages, onLogin }: {
           : <UserRound size={22} />}
         <span className="text-[10px] font-medium">{user ? 'Perfil' : 'Entrar'}</span>
       </button>
+
+      {/* Admin */}
+      {profile?.isAdmin && (
+        <button
+          onClick={() => setView('admin')}
+          className={`flex flex-col items-center justify-center flex-1 gap-0.5 transition-colors ${view === 'admin' ? 'text-indigo-500' : 'text-gray-400'}`}
+        >
+          <ShieldAlert size={22} />
+          <span className="text-[10px] font-medium">Admin</span>
+        </button>
+      )}
     </nav>
   );
 }
