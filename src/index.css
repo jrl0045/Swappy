@@ -21,8 +21,23 @@
   --color-danger: #EF4444;
 }
 
-html {
-  scroll-behavior: smooth;
+html, body {
+  /* Prevent the whole webview from bouncing on iOS but allow native scrolling */
+  overscroll-behavior-y: none;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  -webkit-touch-callout: none; /* Disable iOS callout menu */
+  -webkit-user-select: none; /* Disable text selection for app-like feel */
+  user-select: none;
+  -webkit-tap-highlight-color: transparent; /* Remove grey tap highlight */
+}
+
+/* Enable text selection only where appropriate */
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: auto;
+  user-select: auto;
 }
 
 ::selection {

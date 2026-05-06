@@ -143,7 +143,7 @@ export function Profile({ onListItem }: { onListItem: () => void }) {
       className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
       {/* Header */}
-      <div className="bg-white rounded-3xl border border-gray-100 p-8 mb-8 flex flex-col md:flex-row items-center md:items-start gap-6 shadow-sm">
+      <div className="bg-white rounded-3xl border border-gray-100 p-5 sm:p-8 mb-8 flex flex-col md:flex-row items-center md:items-start gap-4 sm:gap-6 shadow-sm">
         <div className="relative">
           {profile?.avatarUrl
             ? <img src={profile.avatarUrl} alt={profile?.name} className="w-28 h-28 rounded-full border-4 border-white shadow-lg object-cover" referrerPolicy="no-referrer" />
@@ -218,14 +218,14 @@ export function Profile({ onListItem }: { onListItem: () => void }) {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-8 border-b border-gray-200 mb-8">
+      <div className="flex overflow-x-auto hide-scrollbar gap-4 sm:gap-8 border-b border-gray-200 mb-8">
         {([
           { key: 'listings', icon: Package,     label: `${t('activeListings')} (${listings.length})` },
           { key: 'rentals',  icon: ShoppingBag, label: t('myRentals') as string },
           { key: 'reviews',  icon: Star,        label: t('reviewsTabTitle') as string },
         ] as { key: ProfileTab; icon: any; label: string }[]).map(({ key, icon: Icon, label }) => (
           <button key={key} onClick={() => setActiveTab(key)}
-            className={`pb-4 border-b-2 font-medium flex items-center gap-2 transition-colors ${
+            className={`pb-4 border-b-2 font-medium flex items-center gap-2 transition-colors whitespace-nowrap shrink-0 ${
               activeTab === key ? 'border-accent text-accent' : 'border-transparent text-gray-500 hover:text-gray-700'
             }`}>
             <Icon size={18} />{label}

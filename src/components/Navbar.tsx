@@ -1,8 +1,12 @@
-import { Search, MessageCircle, Bell, Plus, Globe, UserRound, LogOut, X, Heart } from 'lucide-react';
+import { Search, MessageCircle, Bell, Plus, Globe, LogOut, X, Heart } from 'lucide-react';
 import { useLanguage } from '../LanguageContext';
 import { useAuth } from '../context/AuthContext';
 import { useUnreadCounts } from '../hooks/useUnreadCounts';
 import logo from '../assets/logo.png';
+
+function getInitials(name: string): string {
+  return name.split(' ').map(w => w[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+}
 
 function Badge({ count }: { count: number }) {
   if (count <= 0) return null;
@@ -34,12 +38,12 @@ export function Navbar({ setView, onListItem, onMessages, onNotifications, onLog
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100">
+    <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-100 pt-[env(safe-area-inset-top)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-28 gap-4">
+        <div className="flex items-center justify-between h-16 sm:h-28 gap-2 sm:gap-4">
           {/* Logo */}
           <div className="flex items-center gap-2 cursor-pointer shrink-0" onClick={() => { setView('home'); onSearchChange(''); }}>
-            <img src={logo} alt="Swappy Logo" className="h-24 w-auto" />
+            <img src={logo} alt="Swappy Logo" className="h-12 sm:h-24 w-auto" />
           </div>
 
           {/* Search Bar */}
@@ -53,7 +57,7 @@ export function Navbar({ setView, onListItem, onMessages, onNotifications, onLog
                 value={searchQuery}
                 onChange={e => handleSearchChange(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && searchQuery.trim()) setView('home'); }}
-                className="block w-full pl-10 pr-8 py-2.5 border border-gray-200 rounded-full leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all sm:text-sm"
+                className="block w-full pl-10 pr-8 py-2.5 border border-gray-200 rounded-full leading-5 bg-gray-50 placeholder-gray-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-accent/20 focus:border-accent transition-all text-sm"
                 placeholder={t('searchPlaceholder') as string}
               />
               {searchQuery && (
@@ -81,7 +85,7 @@ export function Navbar({ setView, onListItem, onMessages, onNotifications, onLog
 
             {user ? (
               <>
-                <button onClick={onMessages} className="p-2 text-gray-500 hover:text-primary hover:bg-gray-100 rounded-full transition-colors relative">
+                <button onClick={onMessages} className="hidden sm:flex p-2 text-gray-500 hover:text-primary hover:bg-gray-100 rounded-full transition-colors relative">
                   <MessageCircle size={22} />
                   <Badge count={unreadMessages} />
                 </button>
@@ -93,14 +97,17 @@ export function Navbar({ setView, onListItem, onMessages, onNotifications, onLog
                   title={t('favorites') as string}>
                   <Heart size={22} />
                 </button>
-                <button className="w-9 h-9 rounded-full border border-gray-200 hover:border-accent transition-all overflow-hidden bg-gray-50 flex items-center justify-center p-0"
+                <button
+                  className={`hidden sm:flex w-9 h-9 rounded-full border hover:border-accent transition-all overflow-hidden items-center justify-center p-0 ${profile?.avatarUrl ? 'bg-gray-50 border-gray-200' : 'bg-accent border-accent'}`}
                   onClick={() => setView('profile')}>
                   {profile?.avatarUrl
                     ? <img src={profile.avatarUrl} alt="Profile" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    : <UserRound size={18} className="text-gray-400" />}
+                    : <span className="text-[11px] font-bold text-white leading-none">
+                        {getInitials(profile?.name || user?.email || '?')}
+                      </span>}
                 </button>
                 <button onClick={async () => { await signOut(); setView('home'); }}
-                  className="p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+                  className="hidden sm:flex p-2 text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
                   title={t('logOut') as string}>
                   <LogOut size={20} />
                 </button>

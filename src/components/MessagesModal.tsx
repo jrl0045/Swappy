@@ -368,7 +368,7 @@ export function MessagesModal({ onClose, targetUserId }: { onClose: () => void, 
   const convIsOwner = activeConv ? isOwnerInConv(activeConv) : false;
 
   return (
-    <div className="fixed inset-0 z-[100] flex flex-col bg-white">
+    <div className="fixed inset-0 z-[100] flex flex-col bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
       {/* Top bar */}
       <div className="flex items-center gap-4 px-4 h-14 border-b border-gray-100 shrink-0">
         <button onClick={onClose} className="p-2 -ml-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors">

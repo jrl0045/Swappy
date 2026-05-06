@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MapPin, Star, Search, Sparkles, Loader2, LayoutGrid, Map, X, Package, Navigation, ChevronUp, Heart } from 'lucide-react';
+import { MapPin, Search, Sparkles, Loader2, LayoutGrid, Map, X, Package, Navigation, ChevronUp, Heart, Star } from 'lucide-react';
 import { categories, RentalItem } from '../data';
 import { fetchItems, fetchUserLikedItemIds, likeItem, unlikeItem } from '../lib/api';
 import { useLanguage } from '../LanguageContext';
@@ -27,6 +27,53 @@ function ItemImage({ src, alt, className }: { src: string; alt: string; classNam
   return (
     <img src={src} alt={alt} className={className} referrerPolicy="no-referrer"
       onError={() => setError(true)} />
+  );
+}
+
+// ─── Skeleton Loader ─────────────────────────────────────────────────────────
+
+function ProductSkeleton() {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden flex flex-col animate-pulse">
+      <div className="aspect-square bg-gray-200" />
+      <div className="p-4 flex flex-col gap-2">
+        <div className="h-4 bg-gray-200 rounded-full w-3/4" />
+        <div className="h-4 bg-gray-200 rounded-full w-1/2" />
+        <div className="h-3 bg-gray-100 rounded-full w-1/3 mt-2" />
+      </div>
+    </div>
+  );
+}
+
+// ─── Badge "Nuevo" ────────────────────────────────────────────────────────────
+
+function NewBadge({ createdAt }: { createdAt?: string }) {
+  if (!createdAt) return null;
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  if (new Date(createdAt) < sevenDaysAgo) return null;
+  return (
+    <span className="bg-accent text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+      Nuevo
+    </span>
+  );
+}
+
+// ─── Empty State ──────────────────────────────────────────────────────────────
+
+function EmptyState({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <div className="w-28 h-28 mb-6">
+        <svg viewBox="0 0 96 96" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+          <circle cx="40" cy="40" r="26" stroke="#E5E7EB" strokeWidth="3" />
+          <line x1="59" y1="59" x2="78" y2="78" stroke="#D1D5DB" strokeWidth="4" strokeLinecap="round" />
+          <path d="M32 32l16 16M48 32L32 48" stroke="#0D9488" strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      </div>
+      <p className="text-gray-700 font-semibold text-lg mb-1">{title}</p>
+      <p className="text-gray-400 text-sm max-w-xs mx-auto">{subtitle}</p>
+    </div>
   );
 }
 
@@ -153,7 +200,7 @@ function MapView({ items, onSelectItem }: { items: RentalItem[]; onSelectItem: (
       )}
       <div className="relative">
         {/* isolation:isolate confines Leaflet z-indexes so notifications/modals render above the map */}
-        <div ref={mapRef} className="rounded-2xl overflow-hidden border border-gray-200" style={{ height: 560, isolation: 'isolate' }} />
+        <div ref={mapRef} className="rounded-2xl overflow-hidden border border-gray-200" style={{ height: 'clamp(280px, 60vh, 500px)', isolation: 'isolate' }} />
 
         {/* Selected item preview card — sibling of the map div, stacks above it naturally */}
         <AnimatePresence>
@@ -309,7 +356,7 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
           <div className="absolute top-10 left-10 w-64 h-64 bg-white rounded-full blur-3xl" />
           <div className="absolute bottom-10 right-20 w-48 h-48 bg-teal-300 rounded-full blur-3xl" />
         </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 relative z-10">
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
             className="text-center max-w-3xl mx-auto">
             <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-6 border border-white/20">
@@ -385,9 +432,8 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
         </div>
 
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 size={32} className="text-accent animate-spin mb-4" />
-            <p className="text-gray-500 text-sm">{t('loadingItems') as string}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+            {Array.from({ length: 8 }).map((_, i) => <ProductSkeleton key={i} />)}
           </div>
         )}
 
@@ -405,13 +451,10 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
         {!loading && !error && viewMode === 'grid' && (
           <>
             {displayItems.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center mb-4">
-                  <Search size={28} className="text-gray-300" />
-                </div>
-                <p className="text-gray-500 font-medium mb-1">Sin resultados</p>
-                <p className="text-gray-400 text-sm">Prueba con otro término o categoría</p>
-              </div>
+              <EmptyState
+                title="Sin resultados"
+                subtitle="Prueba con otro término o categoría"
+              />
             )}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {displayItems.map((item, index) => {
@@ -443,8 +486,10 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
                         <span>{isOwn ? 'Tu objeto' : item.available ? t('available') : t('rented')}</span>
                       </div>
 
-                      {/* Rating + Heart */}
-                      <div className="absolute top-3 right-3 flex items-center gap-1.5">
+                      {/* Rating + Heart + Badge Nuevo */}
+                      <div className="absolute top-3 right-3 flex flex-col items-end gap-1.5">
+                        <NewBadge createdAt={item.createdAt} />
+                        <div className="flex items-center gap-1.5">
                         {item.rating > 0 && (
                           <div className="bg-white/90 backdrop-blur-sm px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 shadow-sm">
                             <Star size={10} className="text-yellow-400 fill-yellow-400" />
@@ -487,11 +532,12 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
                             return c > 0 ? <span className="text-xs font-semibold text-gray-700">{c}</span> : null;
                           })()}
                         </motion.button>
+                        </div>
                       </div>
 
                       {/* Hover CTA — solo si no es propio */}
                       {!isOwn && (
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-4">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-10">
                           <button className="bg-accent text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
                             {t('rentNow')}
                           </button>
@@ -528,7 +574,7 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
           <motion.button
             initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.8 }}
             onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="fixed bottom-6 right-6 z-40 w-11 h-11 bg-accent text-white rounded-full shadow-lg shadow-accent/30 flex items-center justify-center hover:bg-accent-dark transition-colors"
+            className="fixed bottom-20 sm:bottom-6 right-6 z-40 w-11 h-11 bg-accent text-white rounded-full shadow-lg shadow-accent/30 flex items-center justify-center hover:bg-accent-dark transition-colors"
             title="Volver arriba">
             <ChevronUp size={20} />
           </motion.button>
