@@ -85,10 +85,10 @@ export async function reverseGeocode(lat: number, lng: number): Promise<string> 
 
 // ─── Items API ───────────────────────────────────────────────────────────────
 
-export async function fetchItems(category?: string, search?: string): Promise<RentalItem[]> {
+export async function fetchItems(category?: string, search?: string, currentUserId?: string): Promise<RentalItem[]> {
   let query = supabase
     .from('items')
-    .select('*, owner:profiles!owner_id(*)')
+    .select('*, owner:profiles!inner(*)')
     .order('created_at', { ascending: false });
 
   if (category && category !== 'All') query = query.eq('category', category);
@@ -96,7 +96,18 @@ export async function fetchItems(category?: string, search?: string): Promise<Re
 
   const { data, error } = await query;
   if (error) { console.error('Error fetching items:', error); return []; }
-  return (data as DbItem[]).map(dbItemToRentalItem);
+  
+  let items = (data as DbItem[]).map(dbItemToRentalItem);
+  
+  // Apply visibility rules:
+  // Item is visible if active and owner is not banned, OR if the current user is the owner.
+  items = items.filter(item => {
+    const isOwner = currentUserId === item.owner.id;
+    const isActive = item.isActive !== false && !item.owner.isBanned;
+    return isActive || isOwner;
+  });
+
+  return items;
 }
 
 export async function fetchMyListings(ownerId: string): Promise<RentalItem[]> {
@@ -589,6 +600,38 @@ export async function fetchAllProfiles(): Promise<ProfileData[]> {
     responseRate: p.response_rate, location: p.location || '', bio: p.bio || '',
     isBanned: p.is_banned, isAdmin: p.is_admin,
   }));
+}
+
+export async function fetchProfilesPaginated(page: number, pageSize: number): Promise<{ data: ProfileData[], count: number }> {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const { data, count, error } = await supabase
+    .from('profiles')
+    .select('*', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, to);
+  if (error) { console.error('Error fetching profiles:', error); return { data: [], count: 0 }; }
+  const profiles = (data || []).map((p: any) => ({
+    id: p.id, name: p.name, avatarUrl: p.avatar_url, rating: p.rating,
+    reviewsCount: p.reviews_count, verified: p.verified,
+    memberSince: p.member_since || formatMemberSince(p.created_at),
+    responseRate: p.response_rate, location: p.location || '', bio: p.bio || '',
+    isBanned: p.is_banned, isAdmin: p.is_admin,
+  }));
+  return { data: profiles, count: count || 0 };
+}
+
+export async function fetchItemsAdminPaginated(page: number, pageSize: number): Promise<{ data: RentalItem[], count: number }> {
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
+  const { data, count, error } = await supabase
+    .from('items')
+    .select('*, owner:profiles!owner_id(*)', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(from, to);
+  if (error) { console.error('Error fetching items admin:', error); return { data: [], count: 0 }; }
+  const items = (data as DbItem[]).map(dbItemToRentalItem);
+  return { data: items, count: count || 0 };
 }
 
 export async function updateUserBanStatus(userId: string, isBanned: boolean): Promise<void> {

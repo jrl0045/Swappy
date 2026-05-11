@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ShieldAlert, Users, Package, Tags, CheckCircle, Ban, Edit, Plus, X, Lock } from 'lucide-react';
-import { fetchAllProfiles, fetchAllItemsAdmin, updateUserBanStatus, updateItemActiveStatus, fetchCategories, createCategory, updateCategory, ProfileData } from '../lib/api';
-import { fetchItems } from '../lib/api'; // using fetchItems directly for admin panel
+import { fetchProfilesPaginated, fetchItemsAdminPaginated, updateUserBanStatus, updateItemActiveStatus, fetchCategories, createCategory, updateCategory, ProfileData } from '../lib/api';
 import { RentalItem, Category } from '../data';
 import { useAuth } from '../context/AuthContext';
 
@@ -18,20 +17,27 @@ export function AdminPanel() {
   const [newCatIcon, setNewCatIcon] = useState('');
   const [isCreatingCategory, setIsCreatingCategory] = useState(false);
 
+  const [userPage, setUserPage] = useState(1);
+  const [itemPage, setItemPage] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const PAGE_SIZE = 10;
+
   useEffect(() => {
     loadData();
-  }, [activeTab]);
+  }, [activeTab, userPage, itemPage]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       if (activeTab === 'users') {
-        const u = await fetchAllProfiles();
-        setUsers(u);
+        const { data, count } = await fetchProfilesPaginated(userPage, PAGE_SIZE);
+        setUsers(data);
+        setTotalUsers(count);
       } else if (activeTab === 'items') {
-        // Fetch all items without filter for admin
-        const i = await fetchItems();
-        setItems(i);
+        const { data, count } = await fetchItemsAdminPaginated(itemPage, PAGE_SIZE);
+        setItems(data);
+        setTotalItems(count);
       } else if (activeTab === 'categories') {
         const c = await fetchCategories();
         setCategoriesList(c);
@@ -138,6 +144,17 @@ export function AdminPanel() {
                   ))}
                 </tbody>
               </table>
+              {totalUsers > PAGE_SIZE && (
+                <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50">
+                  <span className="text-sm text-gray-500">
+                    Mostrando {(userPage - 1) * PAGE_SIZE + 1} a {Math.min(userPage * PAGE_SIZE, totalUsers)} de {totalUsers}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button disabled={userPage === 1} onClick={() => setUserPage(userPage - 1)} className="px-3 py-1 rounded-md text-sm bg-white border border-gray-300 disabled:opacity-50">Anterior</button>
+                    <button disabled={userPage * PAGE_SIZE >= totalUsers} onClick={() => setUserPage(userPage + 1)} className="px-3 py-1 rounded-md text-sm bg-white border border-gray-300 disabled:opacity-50">Siguiente</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -174,6 +191,17 @@ export function AdminPanel() {
                   ))}
                 </tbody>
               </table>
+              {totalItems > PAGE_SIZE && (
+                <div className="flex items-center justify-between px-6 py-3 border-t border-gray-200 bg-gray-50">
+                  <span className="text-sm text-gray-500">
+                    Mostrando {(itemPage - 1) * PAGE_SIZE + 1} a {Math.min(itemPage * PAGE_SIZE, totalItems)} de {totalItems}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button disabled={itemPage === 1} onClick={() => setItemPage(itemPage - 1)} className="px-3 py-1 rounded-md text-sm bg-white border border-gray-300 disabled:opacity-50">Anterior</button>
+                    <button disabled={itemPage * PAGE_SIZE >= totalItems} onClick={() => setItemPage(itemPage + 1)} className="px-3 py-1 rounded-md text-sm bg-white border border-gray-300 disabled:opacity-50">Siguiente</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -297,11 +297,11 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
   const load = useCallback((category: string, search: string) => {
     let cancelled = false;
     setLoading(true); setError(null);
-    fetchItems(category, search)
+    fetchItems(category, search, user?.id)
       .then(data => { if (!cancelled) { setItems(data); setLoading(false); } })
       .catch(err => { if (!cancelled) { setError(err.message || 'Error'); setLoading(false); } });
     return () => { cancelled = true; };
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => { return load(activeCategory, searchQuery); }, [activeCategory]);
 
