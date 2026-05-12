@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { ShieldAlert, Users, Package, Tags, CheckCircle, Ban, Edit, Plus, X, Lock } from 'lucide-react';
+import { ShieldAlert, Users, Package, Tags, CheckCircle, Ban, Edit, Plus, X, Lock, BarChart } from 'lucide-react';
 import { fetchProfilesPaginated, fetchItemsAdminPaginated, updateUserBanStatus, updateItemActiveStatus, fetchCategories, createCategory, updateCategory, ProfileData } from '../lib/api';
 import { RentalItem, Category } from '../data';
 import { useAuth } from '../context/AuthContext';
+import { AdminReports } from './AdminReports';
 
 export function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<'users' | 'items' | 'categories'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'items' | 'categories' | 'reports'>('users');
   const [users, setUsers] = useState<ProfileData[]>([]);
   const [items, setItems] = useState<RentalItem[]>([]);
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
@@ -101,6 +102,9 @@ export function AdminPanel() {
         </button>
         <button onClick={() => setActiveTab('categories')} className={`px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2 transition-colors ${activeTab === 'categories' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
           <Tags size={16} /> Categorías
+        </button>
+        <button onClick={() => setActiveTab('reports')} className={`px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2 transition-colors ${activeTab === 'reports' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          <BarChart size={16} /> Reportes
         </button>
       </div>
 
@@ -250,6 +254,10 @@ export function AdminPanel() {
                 ))}
               </div>
             </div>
+          )}
+
+          {activeTab === 'reports' && (
+            <AdminReports />
           )}
         </div>
       )}
