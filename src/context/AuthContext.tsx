@@ -30,6 +30,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadProfile = async (userId: string) => {
     try {
       const data = await fetchProfile(userId);
+      if (data?.isBanned) {
+        await supabase.auth.signOut();
+        setProfile(null);
+        setUser(null);
+        setSession(null);
+        alert('Tu cuenta ha sido bloqueada. No puedes acceder al sistema.');
+        return;
+      }
       setProfile(data);
     } catch (err) {
       console.error('Error fetching profile:', err);

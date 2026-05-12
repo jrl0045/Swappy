@@ -435,6 +435,28 @@ export async function fetchInbox(userId: string): Promise<MessageData[]> {
   }));
 }
 
+export async function fetchAllMessagesAdmin(filterUser?: string): Promise<MessageData[]> {
+  let query = supabase
+    .from('messages')
+    .select('*, sender:profiles!sender_id(name, avatar_url), receiver:profiles!receiver_id(name, avatar_url), item:items!item_id(title)')
+    .order('created_at', { ascending: false });
+
+  // No specific filter here, we will filter in JS for admin or pass a custom filter logic if needed.
+  // Actually, fetching thousands of messages might be bad. We'll limit it to recent ones or apply JS filter.
+  // We can fetch max 500 messages to start.
+  query = query.limit(500);
+
+  const { data, error } = await query;
+  if (error) { console.error('Error fetching messages admin:', error); return []; }
+  return (data || []).map((m: any) => ({
+    id: m.id, senderId: m.sender_id, receiverId: m.receiver_id, itemId: m.item_id,
+    content: m.content, read: m.read, createdAt: m.created_at,
+    senderName: m.sender?.name || 'Unknown', senderAvatar: m.sender?.avatar_url || '',
+    receiverName: m.receiver?.name || 'Unknown', receiverAvatar: m.receiver?.avatar_url || '',
+    itemTitle: m.item?.title || null,
+  }));
+}
+
 export async function sendMessage(msg: {
   senderId: string; receiverId: string; itemId?: string; content: string;
 }): Promise<void> {
@@ -637,6 +659,11 @@ export async function fetchItemsAdminPaginated(page: number, pageSize: number): 
 export async function updateUserBanStatus(userId: string, isBanned: boolean): Promise<void> {
   const { error } = await supabase.from('profiles').update({ is_banned: isBanned }).eq('id', userId);
   if (error) { console.error('Error updating user ban status:', error); throw error; }
+}
+
+export async function updateUserAdminStatus(userId: string, isAdmin: boolean): Promise<void> {
+  const { error } = await supabase.from('profiles').update({ is_admin: isAdmin }).eq('id', userId);
+  if (error) { console.error('Error updating user admin status:', error); throw error; }
 }
 
 export async function updateItemActiveStatus(itemId: string, isActive: boolean): Promise<void> {

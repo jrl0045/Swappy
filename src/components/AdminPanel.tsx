@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ShieldAlert, Users, Package, Tags, CheckCircle, Ban, Edit, Plus, X, Lock, BarChart } from 'lucide-react';
-import { fetchProfilesPaginated, fetchItemsAdminPaginated, updateUserBanStatus, updateItemActiveStatus, fetchCategories, createCategory, updateCategory, ProfileData } from '../lib/api';
+import { fetchProfilesPaginated, fetchItemsAdminPaginated, updateUserBanStatus, updateUserAdminStatus, updateItemActiveStatus, fetchCategories, createCategory, updateCategory, ProfileData } from '../lib/api';
 import { RentalItem, Category } from '../data';
 import { useAuth } from '../context/AuthContext';
 import { AdminReports } from './AdminReports';
+import { AdminConversations } from './AdminConversations';
 
 export function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<'users' | 'items' | 'categories' | 'reports'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'items' | 'categories' | 'reports' | 'conversations'>('users');
   const [users, setUsers] = useState<ProfileData[]>([]);
   const [items, setItems] = useState<RentalItem[]>([]);
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
@@ -23,6 +24,9 @@ export function AdminPanel() {
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
   const PAGE_SIZE = 10;
+  
+  // Admin Toggle State
+  const [userToEditAdmin, setUserToEditAdmin] = useState<ProfileData | null>(null);
 
   useEffect(() => {
     loadData();
@@ -49,10 +53,18 @@ export function AdminPanel() {
     setLoading(false);
   };
 
-  const toggleUserBan = async (user: ProfileData) => {
+  const toggleUserBan = async (e: React.MouseEvent, user: ProfileData) => {
+    e.stopPropagation();
     const isBanned = user.isBanned;
     await updateUserBanStatus(user.id, !isBanned);
     setUsers(users.map(u => u.id === user.id ? { ...u, isBanned: !isBanned } : u));
+  };
+
+  const handleAdminToggle = async (isAdmin: boolean) => {
+    if (!userToEditAdmin) return;
+    await updateUserAdminStatus(userToEditAdmin.id, isAdmin);
+    setUsers(users.map(u => u.id === userToEditAdmin.id ? { ...u, isAdmin } : u));
+    setUserToEditAdmin(null);
   };
 
   const toggleItemActive = async (item: RentalItem) => {
@@ -106,6 +118,9 @@ export function AdminPanel() {
         <button onClick={() => setActiveTab('reports')} className={`px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2 transition-colors ${activeTab === 'reports' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
           <BarChart size={16} /> Reportes
         </button>
+        <button onClick={() => setActiveTab('conversations')} className={`px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2 transition-colors ${activeTab === 'conversations' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          <Users size={16} /> Conversaciones
+        </button>
       </div>
 
       {loading ? (
@@ -125,7 +140,7 @@ export function AdminPanel() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {users.map(u => (
-                    <tr key={u.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={u.id} onClick={() => setUserToEditAdmin(u)} className="hover:bg-gray-50 transition-colors cursor-pointer">
                       <td className="px-6 py-3 flex items-center gap-3">
                         <img src={u.avatarUrl || 'https://via.placeholder.com/40'} alt={u.name} className="w-8 h-8 rounded-full object-cover bg-gray-100" />
                         <div>
@@ -140,7 +155,7 @@ export function AdminPanel() {
                         </div>
                       </td>
                       <td className="px-6 py-3 text-right">
-                        <button onClick={() => toggleUserBan(u)} disabled={u.isAdmin} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${u.isBanned ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'} ${u.isAdmin && 'opacity-50 cursor-not-allowed'}`}>
+                        <button onClick={(e) => toggleUserBan(e, u)} disabled={u.isAdmin} className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${u.isBanned ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-red-100 text-red-700 hover:bg-red-200'} ${u.isAdmin && 'opacity-50 cursor-not-allowed'}`}>
                           {u.isBanned ? 'Restaurar' : 'Bloquear'}
                         </button>
                       </td>
@@ -259,6 +274,25 @@ export function AdminPanel() {
           {activeTab === 'reports' && (
             <AdminReports />
           )}
+
+          {activeTab === 'conversations' && (
+            <AdminConversations />
+          )}
+        </div>
+      )}
+
+      {/* Admin Toggle Modal */}
+      {userToEditAdmin && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Gestionar Permisos</h3>
+            <p className="text-sm text-gray-600 mb-6">¿Qué permisos deseas asignar al usuario <span className="font-semibold">{userToEditAdmin.name}</span>?</p>
+            <div className="flex flex-col gap-3">
+              <button onClick={() => handleAdminToggle(true)} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-medium text-sm transition-colors">Volver Administrador</button>
+              <button onClick={() => handleAdminToggle(false)} className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-xl font-medium text-sm transition-colors">Quitar Permisos Admin</button>
+              <button onClick={() => setUserToEditAdmin(null)} className="w-full py-2.5 text-gray-500 hover:text-gray-700 font-medium text-sm mt-2">Cancelar</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
