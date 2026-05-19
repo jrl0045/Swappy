@@ -10,6 +10,7 @@ export function UserPayouts() {
   const [loading, setLoading] = useState(true);
   const [payouts, setPayouts] = useState<PayoutRequestData[]>([]);
   const [unpaidRentals, setUnpaidRentals] = useState<RentalWithDetails[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -33,8 +34,8 @@ export function UserPayouts() {
     setLoading(false);
   };
 
-  const handleRequestPayout = async () => {
-    if (!user || unpaidRentals.length === 0) return;
+   const handleRequestPayout = async () => {
+    if (!user || unpaidRentals.length === 0 || submitting) return;
     
     const hasActiveRequest = payouts.some(p => p.status === 'pending' || p.status === 'in_progress');
     if (hasActiveRequest) {
@@ -42,6 +43,7 @@ export function UserPayouts() {
       return;
     }
 
+    setSubmitting(true);
     try {
       const totalAmount = unpaidRentals.reduce((sum, r) => sum + r.totalPrice, 0);
       const commission = totalAmount * 0.10; // 10% commission
@@ -52,6 +54,8 @@ export function UserPayouts() {
     } catch (error) {
       console.error(error);
       showToast('Error al crear solicitud.', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -179,9 +183,10 @@ export function UserPayouts() {
                   <td className="py-4 pr-3">
                     <button 
                       onClick={handleRequestPayout}
-                      className="bg-accent hover:bg-teal-700 text-white px-4 py-2 rounded-xl font-medium shadow-sm transition-colors text-xs whitespace-nowrap"
+                      disabled={submitting}
+                      className="bg-accent hover:bg-teal-700 text-white px-4 py-2 rounded-xl font-medium shadow-sm transition-colors text-xs whitespace-nowrap disabled:opacity-50"
                     >
-                      Solicitar Ya
+                      {submitting ? 'Enviando...' : 'Solicitar Ya'}
                     </button>
                   </td>
                 </tr>
