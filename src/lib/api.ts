@@ -718,3 +718,89 @@ export async function updateCategory(id: string, updates: { name?: string; icon?
   const { error } = await supabase.from('categories').update(dbUpdates).eq('id', id);
   if (error) { console.error('Error updating category:', error); throw error; }
 }
+
+// ─── Payouts API ─────────────────────────────────────────────────────────────
+
+export interface PayoutRequestData {
+  id: string;
+  userId: string;
+  amountRequested: number;
+  commissionDeducted: number;
+  status: 'pending' | 'in_progress' | 'paid';
+  createdAt: string;
+  paidAt: string | null;
+  userName?: string;
+  userAvatar?: string;
+  rentals?: RentalWithDetails[];
+}
+
+export async function fetchUserPayoutRequests(userId: string): Promise<PayoutRequestData[]> {
+  const { data, error } = await supabase
+    .from('payout_requests')
+    .select('*, rentals(*, item:items(*, owner:profiles!owner_id(*)))')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
+  if (error) { console.error('Error fetching payout requests:', error); return []; }
+  return (data || []).map((p: any) => ({
+    id: p.id, userId: p.user_id, amountRequested: p.amount_requested,
+    commissionDeducted: p.commission_deducted, status: p.status,
+    createdAt: p.created_at, paidAt: p.paid_at,
+    rentals: (p.rentals || []).map((r: any) => ({
+      id: r.id, itemId: r.item?.id || r.item_id, itemTitle: r.item?.title || 'Objeto',
+      itemImage: r.item?.images?.[0] || '', startDate: r.start_date, endDate: r.end_date,
+      totalPrice: r.total_price, status: r.status, insuranceTier: r.insurance_tier,
+      createdAt: r.created_at, ownerName: 'Tú', ownerId: userId, renterId: r.renter_id,
+    }))
+  }));
+}
+
+export async function fetchAllPayoutRequestsAdmin(): Promise<PayoutRequestData[]> {
+  const { data, error } = await supabase
+    .from('payout_requests')
+    .select('*, user:profiles!user_id(*)')
+    .order('created_at', { ascending: true });
+  if (error) { console.error('Error fetching admin payouts:', error); return []; }
+  return (data || []).map((p: any) => ({
+    id: p.id, userId: p.user_id, amountRequested: p.amount_requested,
+    commissionDeducted: p.commission_deducted, status: p.status,
+    createdAt: p.created_at, paidAt: p.paid_at,
+    userName: p.user?.name || 'Unknown', userAvatar: p.user?.avatar_url || '',
+  }));
+}
+
+export async function fetchUnpaidCompletedRentals(userId: string): Promise<RentalWithDetails[]> {
+  const { data, error } = await supabase
+    .from('rentals')
+    .select('*, item:items!inner(id, title, images, owner_id)')
+    .eq('items.owner_id', userId)
+    .eq('status', 'completed')
+    .is('payout_request_id', null)
+    .order('end_date', { ascending: true });
+  if (error) { console.error('Error fetching unpaid rentals:', error); return []; }
+  return (data || []).map((r: any) => ({
+    id: r.id, itemId: r.item?.id || r.item_id, itemTitle: r.item?.title || 'Unknown',
+    itemImage: r.item?.images?.[0] || '', startDate: r.start_date, endDate: r.end_date,
+    totalPrice: r.total_price, status: r.status, insuranceTier: r.insurance_tier,
+    createdAt: r.created_at, ownerName: 'Tú', ownerId: userId, renterId: r.renter_id,
+  }));
+}
+
+export async function createPayoutRequest(userId: string, amount: number, commission: number, rentalIds: string[]): Promise<void> {
+  const { data, error } = await supabase.from('payout_requests').insert({
+    user_id: userId, amount_requested: amount, commission_deducted: commission, status: 'pending'
+  }).select('id').single();
+  if (error) { console.error('Error creating payout:', error); throw error; }
+
+  // Update rentals
+  if (rentalIds.length > 0) {
+    const { error: rErr } = await supabase.from('rentals').update({ payout_request_id: data.id }).in('id', rentalIds);
+    if (rErr) { console.error('Error attaching rentals to payout:', rErr); throw rErr; }
+  }
+}
+
+export async function updatePayoutRequestStatus(payoutId: string, status: 'in_progress' | 'paid'): Promise<void> {
+  const updates: any = { status };
+  if (status === 'paid') updates.paid_at = new Date().toISOString();
+  const { error } = await supabase.from('payout_requests').update(updates).eq('id', payoutId);
+  if (error) { console.error('Error updating payout status:', error); throw error; }
+}

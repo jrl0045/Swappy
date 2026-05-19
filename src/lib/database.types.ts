@@ -49,10 +49,24 @@ export interface DbRental {
   insurance_tier: string;
   total_price: number;
   status: string;
+  payout_request_id: string | null;
   created_at: string;
   // Joined fields
   item?: DbItem;
   renter?: DbProfile;
+}
+
+export interface DbPayoutRequest {
+  id: string;
+  user_id: string;
+  amount_requested: number;
+  commission_deducted: number;
+  status: 'pending' | 'in_progress' | 'paid';
+  created_at: string;
+  paid_at: string | null;
+  // Joined fields
+  user?: DbProfile;
+  rentals?: DbRental[];
 }
 
 export interface DbReview {

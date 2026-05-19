@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, MapPin, Settings, Package, Clock, Plus, ShieldCheck, TrendingUp, Loader2, ShoppingBag, LogOut, UserRound, Users } from 'lucide-react';
+import { Star, MapPin, Settings, Package, Clock, Plus, ShieldCheck, TrendingUp, Loader2, ShoppingBag, LogOut, UserRound, Users, DollarSign } from 'lucide-react';
 import { RentalItem } from '../data';
 import { fetchMyListings, fetchProfile, fetchUserReviewsReceived, fetchFollowCounts, ProfileData, UserReviewData } from '../lib/api';
 import { EditProfileModal } from './EditProfileModal';
 import { EditItemModal } from './EditItemModal';
 import { MyRentals } from './MyRentals';
 import { UserReports } from './UserReports';
+import { UserPayouts } from './UserPayouts';
 import { useLanguage } from '../LanguageContext';
 import { useAuth } from '../context/AuthContext';
 
-type ProfileTab = 'listings' | 'rentals' | 'reviews';
+type ProfileTab = 'listings' | 'rentals' | 'reviews' | 'payouts';
 
 // ─── Pestaña Reviews ──────────────────────────────────────────────────────────
 
@@ -224,6 +225,7 @@ export function Profile({ onListItem }: { onListItem: () => void }) {
           { key: 'listings', icon: Package,     label: `${t('activeListings')} (${listings.length})` },
           { key: 'rentals',  icon: ShoppingBag, label: t('myRentals') as string },
           { key: 'reviews',  icon: Star,        label: t('reviewsTabTitle') as string },
+          { key: 'payouts',  icon: DollarSign,  label: 'Monetización' },
         ] as { key: ProfileTab; icon: any; label: string }[]).map(({ key, icon: Icon, label }) => (
           <button key={key} onClick={() => setActiveTab(key)}
             className={`pb-4 border-b-2 font-medium flex items-center gap-2 transition-colors whitespace-nowrap shrink-0 ${
@@ -297,6 +299,12 @@ export function Profile({ onListItem }: { onListItem: () => void }) {
         {activeTab === 'reviews' && (
           <motion.div key="reviews" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <ReviewsTab userId={user.id} />
+          </motion.div>
+        )}
+
+        {activeTab === 'payouts' && (
+          <motion.div key="payouts" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <UserPayouts />
           </motion.div>
         )}
       </AnimatePresence>

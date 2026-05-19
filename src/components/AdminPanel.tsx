@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { ShieldAlert, Users, Package, Tags, CheckCircle, Ban, Edit, Plus, X, Lock, BarChart } from 'lucide-react';
+import { ShieldAlert, Users, Package, Tags, CheckCircle, Ban, Edit, Plus, X, Lock, BarChart, DollarSign } from 'lucide-react';
 import { fetchProfilesPaginated, fetchItemsAdminPaginated, updateUserBanStatus, updateUserAdminStatus, updateItemActiveStatus, fetchCategories, createCategory, updateCategory, ProfileData } from '../lib/api';
 import { RentalItem, Category } from '../data';
 import { useAuth } from '../context/AuthContext';
 import { AdminReports } from './AdminReports';
+import { AdminReports } from './AdminReports';
 import { AdminConversations } from './AdminConversations';
+import { AdminPayouts } from './AdminPayouts';
 
 export function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<'users' | 'items' | 'categories' | 'reports' | 'conversations'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'items' | 'categories' | 'reports' | 'conversations' | 'payouts'>('users');
   const [users, setUsers] = useState<ProfileData[]>([]);
   const [items, setItems] = useState<RentalItem[]>([]);
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
@@ -120,6 +122,9 @@ export function AdminPanel() {
         </button>
         <button onClick={() => setActiveTab('conversations')} className={`px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2 transition-colors ${activeTab === 'conversations' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
           <Users size={16} /> Conversaciones
+        </button>
+        <button onClick={() => setActiveTab('payouts')} className={`px-4 py-2 text-sm font-medium rounded-full flex items-center gap-2 transition-colors ${activeTab === 'payouts' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+          <DollarSign size={16} /> Monetización
         </button>
       </div>
 
@@ -277,6 +282,10 @@ export function AdminPanel() {
 
           {activeTab === 'conversations' && (
             <AdminConversations />
+          )}
+
+          {activeTab === 'payouts' && (
+            <AdminPayouts />
           )}
         </div>
       )}
