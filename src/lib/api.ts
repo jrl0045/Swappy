@@ -441,9 +441,6 @@ export async function fetchAllMessagesAdmin(filterUser?: string): Promise<Messag
     .select('*, sender:profiles!sender_id(name, avatar_url), receiver:profiles!receiver_id(name, avatar_url), item:items!item_id(title)')
     .order('created_at', { ascending: false });
 
-  // No specific filter here, we will filter in JS for admin or pass a custom filter logic if needed.
-  // Actually, fetching thousands of messages might be bad. We'll limit it to recent ones or apply JS filter.
-  // We can fetch max 500 messages to start.
   query = query.limit(500);
 
   const { data, error } = await query;
@@ -455,6 +452,37 @@ export async function fetchAllMessagesAdmin(filterUser?: string): Promise<Messag
     receiverName: m.receiver?.name || 'Unknown', receiverAvatar: m.receiver?.avatar_url || '',
     itemTitle: m.item?.title || null,
   }));
+}
+
+export async function fetchUserFinancialReports(userId: string) {
+  // 1. Alquileres pagados (como arrendatario)
+  const { data: spentData, error: spentErr } = await supabase
+    .from('rentals')
+    .select('total_price')
+    .eq('renter_id', userId);
+  
+  // 2. Beneficios (como dueño)
+  const { data: earnedData, error: earnedErr } = await supabase
+    .from('rentals')
+    .select('total_price, item:items!inner(id, title, owner_id)')
+    .eq('item.owner_id', userId);
+
+  const totalSpent = (spentData || []).reduce((acc, curr) => acc + (curr.total_price || 0), 0);
+  const totalEarned = (earnedData || []).reduce((acc, curr) => acc + (curr.total_price || 0), 0);
+
+  // 3. Beneficios por publicación
+  const itemEarnings: Record<string, { title: string, total: number }> = {};
+  (earnedData || []).forEach(r => {
+    const item = (r.item as any);
+    if (!item) return;
+    const title = item.title || 'Desconocido';
+    if (!itemEarnings[title]) itemEarnings[title] = { title, total: 0 };
+    itemEarnings[title].total += (r.total_price || 0);
+  });
+
+  const earningsByItem = Object.values(itemEarnings).sort((a, b) => b.total - a.total);
+
+  return { totalSpent, totalEarned, earningsByItem };
 }
 
 export async function sendMessage(msg: {

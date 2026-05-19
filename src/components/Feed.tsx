@@ -381,9 +381,9 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Categories + controles */}
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
           <div className="flex overflow-x-auto hide-scrollbar gap-3 flex-1 pb-1">
-            {(dbCategories.length > 0 ? [{name: 'All', icon: '🏠', isActive: true}, ...dbCategories] : defaultCategories).map(cat => cat.isActive !== false && (
+            {(dbCategories.length > 0 ? [{name: 'All', icon: '🏠', isActive: true}, ...dbCategories.filter(c => c.name !== 'All')] : defaultCategories).map(cat => cat.isActive !== false && (
               <button key={cat.name} onClick={() => setActiveCategory(cat.name)}
                 className={`whitespace-nowrap px-5 py-2.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 ${
                   activeCategory === cat.name
@@ -391,30 +391,32 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
                     : 'bg-white border border-gray-200 text-gray-600 hover:border-accent hover:text-accent hover:bg-accent/5'
                 }`}>
                 <span>{cat.icon}</span>
-                {t(categoryKeyMap[cat.name] as any)}
+                {categoryKeyMap[cat.name] ? t(categoryKeyMap[cat.name] as any) : cat.name}
               </button>
             ))}
           </div>
 
-          {/* Botón cercanía */}
-          <button onClick={handleGeolocate}
-            title={sortByDistance ? 'Ordenado por cercanía' : 'Ordenar por cercanía'}
-            className={`p-2.5 rounded-full border transition-all shrink-0 ${
-              sortByDistance
-                ? 'bg-accent text-white border-accent shadow-sm'
-                : 'bg-white border-gray-200 text-gray-400 hover:text-accent hover:border-accent'
-            }`}>
-            <Navigation size={16} />
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-end sm:justify-start">
+            {/* Botón cercanía */}
+            <button onClick={handleGeolocate}
+              title={sortByDistance ? 'Ordenado por cercanía' : 'Ordenar por cercanía'}
+              className={`p-2.5 rounded-full border transition-all shrink-0 ${
+                sortByDistance
+                  ? 'bg-accent text-white border-accent shadow-sm'
+                  : 'bg-white border-gray-200 text-gray-400 hover:text-accent hover:border-accent'
+              }`}>
+              <Navigation size={16} />
+            </button>
 
-          {/* Toggle lista/mapa */}
-          <div className="flex items-center bg-white border border-gray-200 rounded-full p-1 shrink-0">
-            <button onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-full transition-all ${viewMode === 'grid' ? 'bg-accent text-white' : 'text-gray-400 hover:text-gray-600'}`}
-              title="Vista lista"><LayoutGrid size={16} /></button>
-            <button onClick={() => setViewMode('map')}
-              className={`p-2 rounded-full transition-all ${viewMode === 'map' ? 'bg-accent text-white' : 'text-gray-400 hover:text-gray-600'}`}
-              title="Vista mapa"><Map size={16} /></button>
+            {/* Toggle lista/mapa */}
+            <div className="flex items-center bg-white border border-gray-200 rounded-full p-1 shrink-0">
+              <button onClick={() => setViewMode('grid')}
+                className={`p-2 rounded-full transition-all ${viewMode === 'grid' ? 'bg-accent text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                title="Vista lista"><LayoutGrid size={16} /></button>
+              <button onClick={() => setViewMode('map')}
+                className={`p-2 rounded-full transition-all ${viewMode === 'map' ? 'bg-accent text-white' : 'text-gray-400 hover:text-gray-600'}`}
+                title="Vista mapa"><Map size={16} /></button>
+            </div>
           </div>
         </div>
 

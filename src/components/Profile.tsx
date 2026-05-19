@@ -6,6 +6,7 @@ import { fetchMyListings, fetchProfile, fetchUserReviewsReceived, fetchFollowCou
 import { EditProfileModal } from './EditProfileModal';
 import { EditItemModal } from './EditItemModal';
 import { MyRentals } from './MyRentals';
+import { UserReports } from './UserReports';
 import { useLanguage } from '../LanguageContext';
 import { useAuth } from '../context/AuthContext';
 
@@ -237,6 +238,10 @@ export function Profile({ onListItem }: { onListItem: () => void }) {
       <AnimatePresence mode="wait">
         {activeTab === 'listings' && (
           <motion.div key="listings" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            
+            {/* User Reports Module */}
+            <UserReports />
+
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
               {listings.map((item, index) => (
                 <motion.div key={item.id}
