@@ -279,6 +279,7 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
   const [viewMode, setViewMode] = useState<'grid' | 'map'>('grid');
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sortByDistance, setSortByDistance] = useState(false);
+  const [sortOption, setSortOption] = useState<string>('');
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const initialLikedIds = useRef<Set<string>>(new Set());
@@ -343,14 +344,39 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
     );
   };
 
-  // Items ordenados opcionalmente por distancia
+  // Items ordenados opcionalmente por distancia o selección
   const displayItems = (() => {
-    if (!sortByDistance || !userCoords) return items;
-    return [...items].sort((a, b) => {
-      const dA = a.lat && a.lng ? distanceKm(userCoords.lat, userCoords.lng, a.lat, a.lng) : 99999;
-      const dB = b.lat && b.lng ? distanceKm(userCoords.lat, userCoords.lng, b.lat, b.lng) : 99999;
-      return dA - dB;
-    });
+    let sorted = [...items];
+    const isDistanceSort = sortByDistance || sortOption === 'distance';
+
+    if (sortOption === 'price_asc') {
+      sorted.sort((a, b) => a.pricePerDay - b.pricePerDay);
+    } else if (sortOption === 'price_desc') {
+      sorted.sort((a, b) => b.pricePerDay - a.pricePerDay);
+    } else if (sortOption === 'rating') {
+      sorted.sort((a, b) => b.rating - a.rating);
+    } else if (isDistanceSort && userCoords) {
+      sorted.sort((a, b) => {
+        const dA = a.lat && a.lng ? distanceKm(userCoords.lat, userCoords.lng, a.lat, a.lng) : 99999;
+        const dB = b.lat && b.lng ? distanceKm(userCoords.lat, userCoords.lng, b.lat, b.lng) : 99999;
+        return dA - dB;
+      });
+    } else if (sortOption === 'best') {
+      sorted.sort((a, b) => {
+        const dA = userCoords && a.lat && a.lng ? distanceKm(userCoords.lat, userCoords.lng, a.lat, a.lng) : 99999;
+        const dB = userCoords && b.lat && b.lng ? distanceKm(userCoords.lat, userCoords.lng, b.lat, b.lng) : 99999;
+        const scoreA = (a.pricePerDay / 10) - a.rating + (dA / 10);
+        const scoreB = (b.pricePerDay / 10) - b.rating + (dB / 10);
+        return scoreA - scoreB;
+      });
+    } else if (sortByDistance && userCoords) {
+      sorted.sort((a, b) => {
+        const dA = a.lat && a.lng ? distanceKm(userCoords.lat, userCoords.lng, a.lat, a.lng) : 99999;
+        const dB = b.lat && b.lng ? distanceKm(userCoords.lat, userCoords.lng, b.lat, b.lng) : 99999;
+        return dA - dB;
+      });
+    }
+    return sorted;
   })();
 
   const clearSearch = () => { if (onSearchChange) onSearchChange(''); };
@@ -417,6 +443,31 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
                 className={`p-2 rounded-full transition-all ${viewMode === 'map' ? 'bg-accent text-white' : 'text-gray-400 hover:text-gray-600'}`}
                 title="Vista mapa"><Map size={16} /></button>
             </div>
+
+            {/* Select Ordenar por */}
+            <select
+              value={sortOption}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSortOption(val);
+                setSortByDistance(false); // reset old toggle if select is used
+                if ((val === 'distance' || val === 'best') && !userCoords && navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    pos => setUserCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                    () => {}
+                  );
+                }
+              }}
+              className="bg-white border border-gray-200 text-gray-700 text-sm rounded-full px-4 py-2 outline-none focus:border-accent hover:border-accent transition-colors flex-1 sm:flex-none appearance-none cursor-pointer"
+              style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236B7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1rem', paddingRight: '2.5rem' }}
+            >
+              <option value="" disabled>Ordenar por</option>
+              <option value="price_asc">Menor precio</option>
+              <option value="price_desc">Mayor precio</option>
+              <option value="distance">Más cercano</option>
+              <option value="rating">Mejor calificado</option>
+              <option value="best">Mejor opción</option>
+            </select>
           </div>
         </div>
 
