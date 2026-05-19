@@ -159,7 +159,7 @@ export function UserPayouts() {
                     <button 
                       onClick={() => handlePrint(p)}
                       disabled={p.status !== 'paid'}
-                      className={\`flex items-center gap-1 px-3 py-1.5 rounded-lg font-medium transition-colors \${p.status === 'paid' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'text-gray-400 cursor-not-allowed'}\`}
+                      className={`flex items-center gap-1 px-3 py-1.5 rounded-lg font-medium transition-colors ${p.status === 'paid' ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'text-gray-400 cursor-not-allowed'}`}
                     >
                       <FileText size={14} /> Justificante
                     </button>
