@@ -280,6 +280,8 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
   const [userCoords, setUserCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sortByDistance, setSortByDistance] = useState(false);
   const [sortOption, setSortOption] = useState<string>('');
+  const [showHero, setShowHero] = useState(true);
+  const heroRef = useRef<HTMLDivElement>(null);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
   const initialLikedIds = useRef<Set<string>>(new Set());
@@ -293,6 +295,13 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
     const onScroll = () => setShowScrollTop(window.scrollY > 400);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  // Autofocus the hero section on mount
+  useEffect(() => {
+    if (heroRef.current) {
+      heroRef.current.focus();
+    }
   }, []);
 
   const load = useCallback((category: string, search: string) => {
@@ -384,26 +393,42 @@ export function Feed({ onSelectItem, searchQuery = '', onSearchChange }: FeedPro
   return (
     <div>
       {/* Hero */}
-      <div className="relative bg-gradient-to-br from-teal-900 via-teal-800 to-teal-700 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-10 left-10 w-64 h-64 bg-white rounded-full blur-3xl" />
-          <div className="absolute bottom-10 right-20 w-48 h-48 bg-teal-300 rounded-full blur-3xl" />
-        </div>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 relative z-10">
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-            className="text-center max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-6 border border-white/20">
-              <Sparkles size={14} />
-              <span>{t('accessOverOwnership')}</span>
+      <AnimatePresence>
+        {showHero && (
+          <motion.div
+            ref={heroRef}
+            tabIndex={-1}
+            onBlur={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setShowHero(false);
+              }
+            }}
+            initial={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+            transition={{ duration: 0.6 }}
+            className="relative bg-gradient-to-br from-teal-900 via-teal-800 to-teal-700 text-white outline-none"
+          >
+            <div className="absolute inset-0 opacity-10 pointer-events-none">
+              <div className="absolute top-10 left-10 w-64 h-64 bg-white rounded-full blur-3xl" />
+              <div className="absolute bottom-10 right-20 w-48 h-48 bg-teal-300 rounded-full blur-3xl" />
             </div>
-            <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight tracking-tight">
-              {t('heroTitle1')}<br />
-              <span className="text-teal-300">{t('heroTitle2')}</span>
-            </h1>
-            <p className="text-lg md:text-xl text-teal-100 mb-8 max-w-2xl mx-auto">{t('heroSubtitle')}</p>
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-16 relative z-10">
+              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
+                className="text-center max-w-3xl mx-auto">
+                <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-sm px-4 py-1.5 rounded-full text-sm font-medium mb-6 border border-white/20">
+                  <Sparkles size={14} />
+                  <span>{t('accessOverOwnership')}</span>
+                </div>
+                <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold mb-4 leading-tight tracking-tight">
+                  {t('heroTitle1')}<br />
+                  <span className="text-teal-300">{t('heroTitle2')}</span>
+                </h1>
+                <p className="text-lg md:text-xl text-teal-100 mb-8 max-w-2xl mx-auto">{t('heroSubtitle')}</p>
+              </motion.div>
+            </div>
           </motion.div>
-        </div>
-      </div>
+        )}
+      </AnimatePresence>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Categories + controles */}
